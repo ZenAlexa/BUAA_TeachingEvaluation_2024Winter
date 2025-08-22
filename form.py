@@ -144,7 +144,8 @@ def enforce_rules(choice_answer, choice_list):
     selected_contents = [option.content for option in choice_answer if option]
     if len(set(selected_contents)) == 1:
         for i, option in enumerate(choice_answer):
-            if option.content != '中等':
+            # 某些题目可能不存在可选项，此时 choice_answer 中为 None
+            if option and option.content != '中等':
                 for opt in choice_list[i].options:
                     if opt.content != option.content:
                         choice_answer[i] = opt
