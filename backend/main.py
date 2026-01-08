@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 # Application constants
 APP_TITLE = 'BUAA Evaluation'
-APP_VERSION = '1.2.0'
+APP_VERSION = '1.2.1'
 WINDOW_WIDTH = 520
 WINDOW_HEIGHT = 720
 MIN_WIDTH = 400
@@ -65,24 +65,18 @@ def get_gui_backend() -> Optional[str]:
 
     Returns:
         GUI backend name or None for auto-detection
+
+    Note: We let pywebview auto-detect the best backend.
+    Manual detection can slow down startup significantly.
     """
     system = platform.system().lower()
 
-    if system == 'darwin':
-        # macOS: Use Cocoa (default)
-        return None
-    elif system == 'windows':
-        # Windows: Prefer EdgeChromium for better performance
-        try:
-            import clr  # pythonnet for .NET interop
-            return 'edgechromium'
-        except ImportError:
-            # Fall back to MSHTML if EdgeChromium not available
-            return None
-    elif system == 'linux':
-        # Linux: Use GTK with WebKit2
+    if system == 'linux':
+        # Linux: Explicitly use GTK with WebKit2
         return 'gtk'
     else:
+        # Windows/macOS: Let pywebview auto-detect
+        # This is faster than trying to import clr/pythonnet
         return None
 
 

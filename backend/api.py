@@ -2,7 +2,7 @@
 API bridge between frontend and backend
 Exposes Python methods to JavaScript via pywebview
 
-Version: 1.2.0
+Version: 1.2.1
 - Fixed: Main thread blocking causing app freeze
 - Fixed: Added request timeouts to prevent hangs
 - Fixed: Thread-safe frontend callbacks
@@ -72,6 +72,7 @@ class EvaluationAPI:
     """API class exposed to JavaScript frontend
 
     Thread-safe implementation with non-blocking evaluation process.
+    Uses lazy initialization for faster startup.
     """
 
     BASE_URL = "https://spoc.buaa.edu.cn/pjxt/"
@@ -79,11 +80,24 @@ class EvaluationAPI:
     GITHUB_URL = "https://github.com/ZenAlexa/BUAA_TeachingEvaluation_2024Winter"
 
     def __init__(self):
-        self.session = create_session()
+        # Lazy session initialization for faster startup
+        self._session: Optional[requests.Session] = None
         self.window = None
         self._evaluation_thread: Optional[threading.Thread] = None
         self._stop_evaluation = threading.Event()
         self._lock = threading.Lock()
+        self._session_lock = threading.Lock()
+
+    @property
+    def session(self) -> requests.Session:
+        """Lazily create session on first use"""
+        if self._session is None:
+            with self._session_lock:
+                # Double-check locking pattern
+                if self._session is None:
+                    logger.info("Creating HTTP session (lazy init)")
+                    self._session = create_session()
+        return self._session
 
     def set_window(self, window) -> None:
         """Set reference to pywebview window"""

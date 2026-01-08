@@ -13,6 +13,7 @@ import {
   ToastContainer,
   LanguageSwitch,
   Logo,
+  LoadingScreen,
   type LogEntry,
   type ToastData,
 } from '@/components'
@@ -22,7 +23,7 @@ import styles from './App.module.css'
 type AppState = 'login' | 'settings' | 'progress' | 'complete'
 
 // Application version
-const APP_VERSION = '1.2.0'
+const APP_VERSION = '1.2.1'
 
 export default function App() {
   const { ready, login, getTaskInfo, startEvaluation, openGithub } = useApi()
@@ -222,6 +223,11 @@ export default function App() {
     }
   }
 
+  // Show loading screen while API initializes
+  if (!ready) {
+    return <LoadingScreen text={t.initializing} />
+  }
+
   return (
     <div className={styles.app}>
       <header ref={headerRef} className={styles.header} style={{ opacity: 0 }}>
@@ -254,9 +260,9 @@ export default function App() {
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
               />
-              <Button onClick={handleLogin} loading={loading} disabled={!ready}>
-                {ready ? t.continue : t.loading}
-                {ready && !loading && <ArrowRight size={16} />}
+              <Button onClick={handleLogin} loading={loading}>
+                {t.continue}
+                {!loading && <ArrowRight size={16} />}
               </Button>
             </div>
           </Card>

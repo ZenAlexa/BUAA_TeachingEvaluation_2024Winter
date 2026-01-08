@@ -8,6 +8,9 @@ export interface Translations {
   // Header
   appName: string
 
+  // Loading
+  initializing: string
+
   // Login
   loginTitle: string
   loginSubtitle: string
@@ -65,6 +68,9 @@ export const translations: Record<Locale, Translations> = {
     // Header
     appName: 'BUAA Eval',
 
+    // Loading
+    initializing: 'Initializing...',
+
     // Login
     loginTitle: 'Login',
     loginSubtitle: 'Unified authentication',
@@ -119,6 +125,9 @@ export const translations: Record<Locale, Translations> = {
   zh: {
     // Header
     appName: 'BUAA 评教',
+
+    // Loading
+    initializing: '初始化中...',
 
     // Login
     loginTitle: '登录',

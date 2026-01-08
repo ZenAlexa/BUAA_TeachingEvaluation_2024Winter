@@ -4,9 +4,126 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BUAA Eval</title>
+    <!-- Inline critical styles for immediate loading feedback -->
+    <style>
+      /* Prevent flash of unstyled content */
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #000;
+        color: #fff;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        min-height: 100vh;
+        overflow: hidden;
+      }
+
+      /* Initial loading screen - shows before React mounts */
+      #initial-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #000;
+        z-index: 9999;
+        gap: 24px;
+      }
+
+      /* Animated spinner */
+      .loader-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #262626;
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      /* Loading text */
+      .loader-text {
+        font-size: 14px;
+        color: #737373;
+        letter-spacing: 0.5px;
+      }
+
+      /* Grid background */
+      #initial-loader::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(#171717 1px, transparent 1px),
+          linear-gradient(90deg, #171717 1px, transparent 1px);
+        background-size: 64px 64px;
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      /* Fade out animation when hiding */
+      .loader-fade-out {
+        animation: fadeOut 0.3s ease-out forwards;
+      }
+
+      @keyframes fadeOut {
+        to {
+          opacity: 0;
+          visibility: hidden;
+        }
+      }
+
+      /* Hide loader when React is ready */
+      #root:not(:empty) + script + #initial-loader,
+      #root.loaded ~ #initial-loader {
+        display: none;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Initial loader - removed by React when mounted -->
+    <div id="initial-loader">
+      <div class="loader-spinner"></div>
+      <div class="loader-text">Loading...</div>
+    </div>
+
+    <script>
+      // Remove loader when React app mounts (DOM changes in #root)
+      (function() {
+        var loader = document.getElementById('initial-loader');
+        var root = document.getElementById('root');
+        if (!loader || !root) return;
+
+        // Use MutationObserver for reliable detection
+        var observer = new MutationObserver(function(mutations) {
+          if (root.children.length > 0) {
+            loader.classList.add('loader-fade-out');
+            setTimeout(function() {
+              loader.remove();
+            }, 300);
+            observer.disconnect();
+          }
+        });
+
+        observer.observe(root, { childList: true });
+
+        // Fallback: remove loader after max 15 seconds
+        setTimeout(function() {
+          if (loader.parentNode) {
+            loader.classList.add('loader-fade-out');
+            setTimeout(function() {
+              loader.remove();
+            }, 300);
+          }
+          observer.disconnect();
+        }, 15000);
+      })();
+    </script>
   </body>
 </html>
