@@ -135,7 +135,7 @@ export default function App() {
         </div>
         <div className={styles.headerRight}>
           <LanguageSwitch />
-          <span className={styles.version}>1.1.0</span>
+          <span className={styles.version}>1.1.1</span>
         </div>
       </header>
 

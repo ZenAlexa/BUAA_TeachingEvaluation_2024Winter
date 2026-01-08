@@ -67,8 +67,8 @@ exe = EXE(
     version_info={
         'CompanyName': 'BUAA',
         'FileDescription': 'BUAA Teaching Evaluation Assistant',
-        'FileVersion': '1.1.0',
+        'FileVersion': '1.1.1',
         'ProductName': 'BUAA Evaluation',
-        'ProductVersion': '1.1.0',
+        'ProductVersion': '1.1.1',
     },
 )

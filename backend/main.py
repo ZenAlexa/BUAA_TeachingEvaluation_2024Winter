@@ -7,9 +7,17 @@ Cross-platform GUI using pywebview
 import os
 import sys
 
+# Add parent directory to path for PyInstaller compatibility
+if getattr(sys, 'frozen', False):
+    # Running from PyInstaller bundle
+    sys.path.insert(0, sys._MEIPASS)
+else:
+    # Running in development
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import webview
 
-from .api import EvaluationAPI
+from api import EvaluationAPI
 
 
 def get_resource_path(relative_path: str) -> str:

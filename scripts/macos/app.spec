@@ -77,8 +77,8 @@ app = BUNDLE(
     info_plist={
         'CFBundleName': 'BUAA Evaluation',
         'CFBundleDisplayName': 'BUAA Evaluation',
-        'CFBundleVersion': '1.1.0',
-        'CFBundleShortVersionString': '1.1.0',
+        'CFBundleVersion': '1.1.1',
+        'CFBundleShortVersionString': '1.1.1',
         'NSHighResolutionCapable': True,
         'LSMinimumSystemVersion': '10.13.0',
     },

@@ -1,6 +1,6 @@
 [project]
 name = "buaa-evaluation"
-version = "1.1.0"
+version = "1.1.1"
 description = "Teaching evaluation assistant for BUAA"
 readme = "README.md"
 requires-python = ">=3.8"
