@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/github/license/ZenAlexa/BUAA_TeachingEvaluation_2024Winter?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.9+-blue?style=flat-square)](https://python.org)
 
-北航教学评估助手 | BUAA Teaching Evaluation Assistant
+北航评教助手 | BUAA Teaching Evaluation Assistant
 
 一键完成课程评价 | Auto-complete course evaluations with one click
 
