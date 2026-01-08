@@ -54,6 +54,7 @@ export interface Translations {
   specialTeachersSection: string
   otherTeachersSection: string
   evaluationFailed: string
+  waiting: string
 
   // Footer
   footer: string
@@ -110,6 +111,7 @@ export const translations: Record<Locale, Translations> = {
     specialTeachersSection: '-- Special Teachers --',
     otherTeachersSection: '-- Other Teachers --',
     evaluationFailed: 'Failed',
+    waiting: 'Waiting...',
 
     // Footer
     footer: 'Made with ❤️ for BUAA',
@@ -164,6 +166,7 @@ export const translations: Record<Locale, Translations> = {
     specialTeachersSection: '-- 特殊教师 --',
     otherTeachersSection: '-- 其他教师 --',
     evaluationFailed: '失败',
+    waiting: '等待中...',
 
     // Footer
     footer: '为 BUAA 用 ❤️ 制作',

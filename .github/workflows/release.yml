@@ -1,0 +1,204 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python dependencies
+        run: |
+          pip install pywebview pyinstaller requests beautifulsoup4 pyobjc
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+          cp public/logo.png ../backend/web/
+
+      - name: Build macOS app
+        run: |
+          pyinstaller \
+            --name "BUAA-Evaluation" \
+            --onedir \
+            --windowed \
+            --add-data "backend/web:web" \
+            --add-data "backend/evaluator.py:." \
+            --add-data "backend/api.py:." \
+            --add-data "backend/__init__.py:." \
+            --hidden-import webview \
+            --hidden-import webview.platforms.cocoa \
+            --hidden-import requests \
+            --hidden-import bs4 \
+            --osx-bundle-identifier "com.buaa.evaluation" \
+            --icon "assets/icons/icon.icns" \
+            --clean \
+            --noconfirm \
+            backend/main.py
+
+      - name: Create zip
+        run: |
+          cd dist
+          zip -r BUAA-Evaluation-macOS.zip BUAA-Evaluation.app
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: dist/BUAA-Evaluation-macOS.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python dependencies
+        run: |
+          pip install pywebview pyinstaller requests beautifulsoup4
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+          copy public\logo.png ..\backend\web\
+
+      - name: Build Windows exe
+        run: |
+          pyinstaller `
+            --name "BUAA-Evaluation" `
+            --onefile `
+            --windowed `
+            --add-data "backend/web;web" `
+            --add-data "backend/evaluator.py;." `
+            --add-data "backend/api.py;." `
+            --add-data "backend/__init__.py;." `
+            --hidden-import webview `
+            --hidden-import webview.platforms.edgechromium `
+            --hidden-import webview.platforms.winforms `
+            --hidden-import requests `
+            --hidden-import bs4 `
+            --hidden-import clr `
+            --icon "assets/icons/icon.ico" `
+            --clean `
+            --noconfirm `
+            backend/main.py
+
+      - name: Rename output
+        run: |
+          move dist\BUAA-Evaluation.exe dist\BUAA-Evaluation-Windows.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: dist/BUAA-Evaluation-Windows.exe
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-gi gir1.2-webkit2-4.1 libgirepository1.0-dev
+
+      - name: Install Python dependencies
+        run: |
+          pip install pywebview pyinstaller requests beautifulsoup4 pygobject
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+          cp public/logo.png ../backend/web/
+
+      - name: Build Linux binary
+        run: |
+          pyinstaller \
+            --name "buaa-evaluation" \
+            --onefile \
+            --add-data "backend/web:web" \
+            --add-data "backend/evaluator.py:." \
+            --add-data "backend/api.py:." \
+            --add-data "backend/__init__.py:." \
+            --add-data "assets/icons/icon.png:icons" \
+            --hidden-import webview \
+            --hidden-import webview.platforms.gtk \
+            --hidden-import requests \
+            --hidden-import bs4 \
+            --clean \
+            --noconfirm \
+            backend/main.py
+
+      - name: Rename output
+        run: |
+          mv dist/buaa-evaluation dist/BUAA-Evaluation-Linux
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: dist/BUAA-Evaluation-Linux
+
+  release:
+    needs: [build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/macos-build/BUAA-Evaluation-macOS.zip
+            artifacts/windows-build/BUAA-Evaluation-Windows.exe
+            artifacts/linux-build/BUAA-Evaluation-Linux
+          draft: false
+          prerelease: false
+          generate_release_notes: true

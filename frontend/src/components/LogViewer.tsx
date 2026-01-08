@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { Check, X, Info, AlertTriangle } from 'lucide-react'
+import { useI18n } from '@/i18n'
 import styles from './LogViewer.module.css'
 
 export interface LogEntry {
@@ -20,6 +21,7 @@ const icons = {
 }
 
 export function LogViewer({ logs }: LogViewerProps) {
+  const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export function LogViewer({ logs }: LogViewerProps) {
   return (
     <div className={styles.container} ref={containerRef}>
       {logs.length === 0 ? (
-        <div className={styles.empty}>Waiting...</div>
+        <div className={styles.empty}>{t.waiting}</div>
       ) : (
         logs.map((log) => {
           const Icon = icons[log.type]
