@@ -3,17 +3,23 @@
 Desktop application entry point
 Cross-platform GUI using pywebview
 
-Version: 1.2.0
-- Improved cross-platform compatibility
-- Added proper GUI backend selection
-- Better error handling and logging
+Version: 1.3.0
+- Optimized startup using webview.start(func) pattern
+- Added window.events for proper lifecycle management
+- Background session pre-warming for faster first login
+- Platform-specific optimizations (Windows/macOS/Linux)
+
+Based on pywebview best practices:
+- https://pywebview.flowrl.com/guide/usage.html
+- https://github.com/r0x0r/pywebview/issues/627
 """
 
 import logging
 import os
 import platform
 import sys
-from typing import Optional
+import threading
+from typing import Optional, Callable
 
 # Add parent directory to path for PyInstaller compatibility
 if getattr(sys, 'frozen', False):
@@ -36,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 # Application constants
 APP_TITLE = 'BUAA Evaluation'
-APP_VERSION = '1.2.1'
+APP_VERSION = '1.3.0'
 WINDOW_WIDTH = 520
 WINDOW_HEIGHT = 720
 MIN_WIDTH = 400
@@ -66,8 +72,10 @@ def get_gui_backend() -> Optional[str]:
     Returns:
         GUI backend name or None for auto-detection
 
-    Note: We let pywebview auto-detect the best backend.
-    Manual detection can slow down startup significantly.
+    Platform-specific behavior:
+    - Windows: Auto-detect (EdgeChromium > EdgeHTML > MSHTML)
+    - macOS: Auto-detect (Cocoa WebKit)
+    - Linux: Explicitly use GTK with WebKit2
     """
     system = platform.system().lower()
 
@@ -75,28 +83,33 @@ def get_gui_backend() -> Optional[str]:
         # Linux: Explicitly use GTK with WebKit2
         return 'gtk'
     else:
-        # Windows/macOS: Let pywebview auto-detect
-        # This is faster than trying to import clr/pythonnet
+        # Windows/macOS: Let pywebview auto-detect the best renderer
+        # Avoid manual detection which can slow down startup
         return None
 
 
 def setup_platform_specific() -> None:
-    """Apply platform-specific configurations"""
+    """
+    Apply platform-specific configurations before window creation
+
+    This runs on the main thread before webview.start()
+    """
     system = platform.system().lower()
 
     if system == 'darwin':
         # macOS: Enable high-DPI support
         try:
-            from AppKit import NSApplication, NSApp
+            from AppKit import NSApplication
             NSApplication.sharedApplication()
         except ImportError:
             pass
 
     elif system == 'windows':
-        # Windows: Enable DPI awareness for crisp rendering
+        # Windows: Enable DPI awareness for crisp rendering on 4K displays
         try:
             import ctypes
-            ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PROCESS_PER_MONITOR_DPI_AWARE
+            # PROCESS_PER_MONITOR_DPI_AWARE = 2
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)
         except (AttributeError, OSError):
             try:
                 ctypes.windll.user32.SetProcessDPIAware()
@@ -105,7 +118,12 @@ def setup_platform_specific() -> None:
 
 
 def create_window(api: EvaluationAPI) -> webview.Window:
-    """Create and configure the main application window"""
+    """
+    Create and configure the main application window
+
+    Window is created but not shown until webview.start() is called.
+    This allows for faster perceived startup.
+    """
     html_path = get_resource_path('web/index.html')
 
     if not os.path.exists(html_path):
@@ -127,26 +145,111 @@ def create_window(api: EvaluationAPI) -> webview.Window:
     return window
 
 
-def on_closing(api: EvaluationAPI) -> bool:
-    """Handle window close event"""
-    # Stop any running evaluation
-    api.stop_evaluation()
-    return True
+def on_window_shown(api: EvaluationAPI) -> Callable[[], None]:
+    """
+    Factory function that returns window shown event handler
+
+    This runs when the window is first displayed to the user.
+    Use this for non-critical initialization that can happen after UI shows.
+    """
+    def handler():
+        logger.info("Window shown - starting background initialization")
+
+        # Pre-warm session in background thread
+        # This makes the first login faster
+        def prewarm_session():
+            try:
+                # Access the session property to trigger lazy initialization
+                _ = api.session
+                logger.info("HTTP session pre-warmed successfully")
+            except Exception as e:
+                logger.warning(f"Session pre-warm failed (non-critical): {e}")
+
+        # Run in daemon thread so it doesn't block app exit
+        threading.Thread(
+            target=prewarm_session,
+            daemon=True,
+            name="SessionPrewarm"
+        ).start()
+
+    return handler
+
+
+def on_window_loaded(window: webview.Window) -> Callable[[], None]:
+    """
+    Factory function that returns DOM loaded event handler
+
+    This runs when the frontend HTML/JS has fully loaded.
+    """
+    def handler():
+        logger.info("Frontend loaded - DOM ready")
+        # Notify frontend that Python backend is ready
+        try:
+            window.evaluate_js("window.dispatchEvent(new Event('pythonReady'))")
+        except Exception as e:
+            logger.debug(f"Could not dispatch pythonReady event: {e}")
+
+    return handler
+
+
+def on_window_closing(api: EvaluationAPI) -> Callable[[], bool]:
+    """
+    Factory function that returns window closing event handler
+
+    Returns True to allow closing, False to prevent.
+    """
+    def handler():
+        logger.info("Window closing - cleaning up")
+        api.stop_evaluation()
+        return True
+
+    return handler
+
+
+def on_startup(window: webview.Window, api: EvaluationAPI) -> None:
+    """
+    Startup callback executed in a separate thread after webview.start()
+
+    This is the recommended pywebview pattern for background initialization.
+    The GUI loop is running, so the window stays responsive.
+
+    See: https://pywebview.flowrl.com/guide/usage.html
+    """
+    logger.info("Startup callback running in background thread")
+
+    # Register event handlers
+    # Note: Events must be registered after start() is called
+    window.events.shown += on_window_shown(api)
+    window.events.loaded += on_window_loaded(window)
+    window.events.closing += on_window_closing(api)
+
+    logger.info("Event handlers registered")
 
 
 def main() -> None:
-    """Application entry point"""
+    """
+    Application entry point
+
+    Startup sequence:
+    1. Platform-specific setup (DPI awareness, etc.)
+    2. Create API instance (minimal initialization)
+    3. Create window (not shown yet)
+    4. Start webview with callback
+    5. Callback registers events and does background init
+    6. Window shows with loading spinner
+    7. Frontend loads and becomes interactive
+    """
     logger.info(f"Starting {APP_TITLE} v{APP_VERSION}")
     logger.info(f"Platform: {platform.system()} {platform.release()}")
     logger.info(f"Python: {sys.version}")
 
-    # Apply platform-specific setup
+    # Step 1: Platform-specific setup (must be before window creation)
     setup_platform_specific()
 
-    # Initialize API
+    # Step 2: Initialize API (minimal - uses lazy initialization)
     api = EvaluationAPI()
 
-    # Create window
+    # Step 3: Create window
     try:
         window = create_window(api)
     except FileNotFoundError as e:
@@ -157,18 +260,19 @@ def main() -> None:
     # Store window reference for JavaScript callbacks
     api.set_window(window)
 
-    # Set up closing handler
-    window.events.closing += lambda: on_closing(api)
-
-    # Get optimal GUI backend
+    # Step 4: Get optimal GUI backend
     gui = get_gui_backend()
+    logger.info(f"Using GUI backend: {gui or 'auto'}")
 
-    # Start application
-    logger.info(f"Starting webview with GUI: {gui or 'auto'}")
+    # Step 5: Start application with startup callback
+    # The callback runs in a separate thread, keeping GUI responsive
+    # See: https://pywebview.flowrl.com/guide/usage.html
     webview.start(
+        func=on_startup,
+        args=(window, api),
         debug=os.environ.get('DEBUG', '').lower() in ('1', 'true'),
         gui=gui,
-        http_server=True,  # Use HTTP server for better compatibility
+        http_server=True,  # Required for proper asset loading
     )
 
     logger.info("Application closed")

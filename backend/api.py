@@ -2,7 +2,9 @@
 API bridge between frontend and backend
 Exposes Python methods to JavaScript via pywebview
 
-Version: 1.2.1
+Version: 1.3.0
+- Optimized: Lazy session initialization for faster startup
+- Optimized: Background session pre-warming after window shown
 - Fixed: Main thread blocking causing app freeze
 - Fixed: Added request timeouts to prevent hangs
 - Fixed: Thread-safe frontend callbacks
@@ -60,7 +62,7 @@ def create_session() -> requests.Session:
 
     # Set default headers
     session.headers.update({
-        'User-Agent': 'BUAA-Evaluation/1.2.0',
+        'User-Agent': 'BUAA-Evaluation/1.3.0',
         'Accept': 'application/json, text/html, */*',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
     })
