@@ -1,0 +1,78 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--white);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--black);
+  border: 1px solid var(--gray-800);
+  cursor: pointer;
+  transition: all 150ms ease;
+  position: relative;
+  margin-top: -1px;
+}
+
+.option:first-child {
+  margin-top: 0;
+}
+
+.option:hover {
+  background: var(--gray-950);
+  z-index: 1;
+}
+
+.option.selected {
+  border-color: var(--white);
+  z-index: 2;
+}
+
+.input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.optionLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--white);
+}
+
+.description {
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  background: var(--white);
+  color: var(--black);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

@@ -27,10 +27,13 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
+
+# Build outputs
+dist/
+build/
 *.spec
+!scripts/**/*.spec
 
 # Installer logs
 pip-log.txt
@@ -169,3 +172,17 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Frontend
+frontend/node_modules/
+backend/web/
+
+# Icon build artifacts
+assets/icons/*.iconset/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store

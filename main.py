@@ -1,10 +1,17 @@
+"""
+CLI entry point for BUAA evaluation
+For GUI mode, use: python -m backend.main
+"""
+
 import time
-import requests
-from bs4 import BeautifulSoup
+import sys
 from getpass import getpass
 from urllib.parse import quote
-from form import fill_form
-import sys
+
+import requests
+from bs4 import BeautifulSoup
+
+from backend.evaluator import fill_form
 
 session = requests.Session()
 

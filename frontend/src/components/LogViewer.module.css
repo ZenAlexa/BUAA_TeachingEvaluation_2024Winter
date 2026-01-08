@@ -1,0 +1,54 @@
+.container {
+  background: var(--black);
+  border: 1px solid var(--gray-800);
+  padding: 16px;
+  max-height: 280px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.empty {
+  color: var(--gray-600);
+  text-align: center;
+  padding: 24px;
+}
+
+.entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.message {
+  color: var(--gray-400);
+  word-break: break-word;
+}
+
+.success .icon {
+  color: var(--success);
+}
+
+.error .icon {
+  color: var(--error);
+}
+
+.info .icon {
+  color: var(--blue);
+}
+
+.warning .icon {
+  color: var(--warning);
+}

@@ -1,0 +1,31 @@
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-400);
+  background: transparent;
+  border: 1px solid var(--gray-800);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.switch:hover {
+  border-color: var(--gray-600);
+  color: var(--gray-300);
+}
+
+.option {
+  transition: color 0.15s ease;
+}
+
+.option.active {
+  color: var(--white);
+}
+
+.divider {
+  color: var(--gray-700);
+}

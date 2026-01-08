@@ -1,0 +1,49 @@
+.container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--gray-900);
+  border: 1px solid var(--gray-800);
+  font-size: 14px;
+  color: var(--white);
+  animation: slideUp 200ms ease;
+}
+
+.toast svg {
+  flex-shrink: 0;
+}
+
+.success svg {
+  color: var(--success);
+}
+
+.error svg {
+  color: var(--error);
+}
+
+.info svg {
+  color: var(--blue);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

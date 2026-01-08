@@ -1,97 +1,74 @@
-# BUAA 评教助手
+# BUAA Eval
 
-[![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/ZenAlexa/BUAA_TeachingEvaluation_2024Winter?style=flat-square)](https://github.com/ZenAlexa/BUAA_TeachingEvaluation_2024Winter/releases)
+[![License](https://img.shields.io/github/license/ZenAlexa/BUAA_TeachingEvaluation_2024Winter?style=flat-square)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.8+-blue?style=flat-square)](https://python.org)
+[![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue?style=flat-square)](https://typescriptlang.org)
 
-自动完成北航综合评教，支持自定义评价策略。
+Desktop application for BUAA teaching evaluation.
 
-## 快速开始
+## Download
+
+| Platform | File |
+|----------|------|
+| Windows | [`BUAA-Eval.exe`](https://github.com/ZenAlexa/BUAA_TeachingEvaluation_2024Winter/releases/latest) |
+| macOS | [`BUAA-Eval.app`](https://github.com/ZenAlexa/BUAA_TeachingEvaluation_2024Winter/releases/latest) |
+| Linux | [`buaa-eval`](https://github.com/ZenAlexa/BUAA_TeachingEvaluation_2024Winter/releases/latest) |
+
+## Features
+
+- **Full Score** - Select highest score for each question
+- **Random** - Random selection from top options
+- **Minimum Pass** - Select minimum passing score
+- **Special Teachers** - Custom evaluation for specific teachers
+- **Auto Skip** - Skip already evaluated courses
+
+## Development
+
+### Requirements
+
+- Python 3.8+
+- Node.js 18+
+
+### Setup
 
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/ZenAlexa/BUAA_TeachingEvaluation_2024Winter.git
+cd BUAA_TeachingEvaluation_2024Winter
+
+# Backend
+pip install -e ".[dev]"
+
+# Frontend
+cd frontend && npm install
+```
+
+### Run
+
+```bash
+cd frontend && npm run build && cd ..
+python -m backend.main
+```
+
+### Build
+
+```bash
+# Windows
+.\scripts\windows\build.ps1
+
+# macOS
+./scripts/macos/build.sh
+
+# Linux
+./scripts/linux/build.sh
+```
+
+## CLI
+
+```bash
 python main.py
 ```
 
-## 功能
+## License
 
-### 三种评价策略
-
-| 策略 | 说明 | 适用场景 |
-|------|------|----------|
-| **全好评** | 每题都选最高分选项 | 大多数情况，省心 |
-| **随机评价** | 从前三个选项里随机选 | 想让评教结果看起来更"真实" |
-| **及格线评价** | 每题选第三档（刚好及格） | 你懂的 |
-
-### 指定老师单独评分
-
-选完评价策略后，可以额外指定某些老师单独打及格分。比如：
-- 选了"全好评"，但想给张三老师打及格
-- 输入老师姓名即可，多个老师用逗号分开
-
-程序会先处理指定的老师（及格分），再处理其他老师（按你选的策略）。
-
-### 自动跳过已评课程
-
-已经评过的课程会自动跳过，不会重复提交。可以放心多次运行。
-
-### 防检测机制
-
-- 每次评教间隔 1 秒，避免请求过快
-- 选项不会全选同一个，避免被系统判定为无效
-- 前五题保证至少有一个"合格以上"的选项
-
-## 使用示例
-
-```
-BUAA 评教助手
-
-用户名: your_username
-密码: ********
-
-登录中...
-登录成功
-
-评教方式:
-  1. 全好评 (默认)
-  2. 随机
-  3. 及格线
-选择 [1]: 1
--> 全好评
-
-有要单独打及格的老师? (y/n) [n]: y
-老师姓名 (逗号分隔): 张三, 李四
--> 及格: 张三, 李四
-
-任务: 2024年秋季学期评教
-
--- 指定教师(及格) --
-[ok] 高等数学 - 张三 (及格)
-[ok] 线性代数 - 李四 (及格)
--- 其他教师 --
-[ok] 数据结构 - 王五
-[ok] 大学英语 - 赵六
-
-完成! 好用的话给个 star :)
-```
-
-## 注意
-
-- 密码输入时不显示，正常输入即可
-- 评教结果提交后不可撤销
-- 随机和及格线评价慎用，评教分数会影响老师
-
-## 原理
-
-1. 模拟登录 SSO 统一认证
-2. 获取当前学期的评教任务
-3. 遍历所有待评课程
-4. 根据选择的策略自动填写并提交
-
-## 免责声明
-
-仅供学习交流，使用后果自负。有问题欢迎提 Issue。
-
-## 致谢
-
-- [fondoger/buaa-teacher-evaluation](https://github.com/fondoger/buaa-teacher-evaluation)
-- BUAA 群友们的测试反馈
+[MIT](LICENSE)

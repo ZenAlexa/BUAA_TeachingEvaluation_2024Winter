@@ -1,0 +1,27 @@
+.card {
+  background: var(--black);
+  border: 1px solid var(--gray-800);
+}
+
+.header {
+  padding: 24px 24px 0;
+  border-bottom: 1px solid var(--gray-800);
+  padding-bottom: 16px;
+  margin-bottom: 0;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--gray-500);
+}
+
+.body {
+  padding: 24px;
+}
