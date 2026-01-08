@@ -34,7 +34,7 @@ def login(username, password):
         }
         response = session.post(LOGIN_URL, data=form, allow_redirects=True)
         response.raise_for_status()
-        if '综合评教系统' in response.text:
+        if '未评价不可查看课表' in response.text:
             return True
         else:
             return False
