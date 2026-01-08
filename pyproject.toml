@@ -1,9 +1,9 @@
 [project]
 name = "buaa-evaluation"
-version = "1.1.1"
+version = "1.2.0"
 description = "Teaching evaluation assistant for BUAA"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [
     { name = "ZenAlexa" }
@@ -16,25 +16,27 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 dependencies = [
-    "requests>=2.28.0",
-    "beautifulsoup4>=4.12.0",
-    "pywebview>=5.0",
+    "requests>=2.32.0",
+    "beautifulsoup4>=4.12.3",
+    "pywebview>=5.3",
+    "urllib3>=2.2.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pyinstaller>=6.0",
+    "pyinstaller>=6.11.0",
+    "ruff>=0.8.0",
 ]
 macos = [
-    "pyobjc>=10.0",
+    "pyobjc>=10.3",
 ]
 
 [project.urls]
@@ -52,8 +54,21 @@ include = ["backend*"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py38"
+target-version = "py39"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "N"]
-ignore = ["E501"]
+select = [
+    "E",      # pycodestyle errors
+    "F",      # pyflakes
+    "W",      # pycodestyle warnings
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+]
+ignore = ["E501", "B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["backend", "evaluator"]

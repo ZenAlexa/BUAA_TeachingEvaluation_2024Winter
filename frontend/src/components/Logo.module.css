@@ -1,0 +1,18 @@
+.logo {
+  display: block;
+  flex-shrink: 0;
+}
+
+.logo path,
+.logo rect,
+.logo circle {
+  transition: all 0.3s ease;
+}
+
+.logo:hover path[stroke] {
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.5));
+}
+
+.logo:hover circle[fill="url(#logoGradient)"] {
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.6));
+}

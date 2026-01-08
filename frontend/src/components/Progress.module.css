@@ -5,20 +5,143 @@
 }
 
 .bar {
-  height: 4px;
+  position: relative;
+  height: 6px;
   background: var(--gray-800);
+  border-radius: var(--radius-full);
+  overflow: hidden;
 }
 
 .fill {
+  position: relative;
   height: 100%;
-  background: var(--white);
-  transition: width 200ms ease;
+  background: linear-gradient(90deg, var(--blue-600) 0%, var(--blue-400) 100%);
+  border-radius: var(--radius-full);
+  will-change: width;
 }
 
+/* Shimmer effect on progress bar */
+.fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Glow effect at the end of progress bar */
+.glow {
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  background: var(--blue-400);
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--blue-400), 0 0 24px var(--blue-500);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translateY(-50%) scale(1.2);
+  }
+}
+
+/* Floating particles */
+.particles {
+  position: absolute;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--blue-400);
+  border-radius: 50%;
+  animation: float 1.5s ease-out infinite;
+}
+
+.particle:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.particle:nth-child(2) {
+  animation-delay: 0.3s;
+}
+
+.particle:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+@keyframes float {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0);
+  }
+}
+
+/* Stats section */
 .stats {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
-  color: var(--gray-500);
+  align-items: center;
+  font-size: var(--text-sm);
   font-family: var(--font-mono);
+}
+
+.count {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.current {
+  color: var(--white);
+  font-weight: 500;
+}
+
+.separator {
+  color: var(--gray-600);
+}
+
+.total {
+  color: var(--gray-500);
+}
+
+.percent {
+  color: var(--blue-400);
+  font-weight: 600;
+  min-width: 40px;
+  text-align: right;
 }

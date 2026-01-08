@@ -25,28 +25,48 @@ class Question:
 
 
 def parse_questions(form_data: Dict[str, Any]) -> List[Question]:
-    """Parse questions from API response"""
+    """Parse questions from API response with error handling"""
     questions = []
-    entries = form_data['pjxtWjWjbReturnEntity']['wjzblist'][0]['tklist']
 
-    for entry in entries:
-        q = Question(
-            is_choice=entry['tmlx'] == '1',
-            type=entry['tmlx'],
-            id=entry['tmid'],
-            options=[]
-        )
+    try:
+        # Navigate through nested structure safely
+        wj_entity = form_data.get('pjxtWjWjbReturnEntity')
+        if not wj_entity:
+            raise ValueError("Missing pjxtWjWjbReturnEntity in form data")
 
-        for opt in entry.get('tmxxlist', []):
-            q.options.append(Option(
-                id=opt['tmxxid'],
-                content=opt['xxmc'],
-                points=float(opt['xxfz'])
-            ))
+        wjzb_list = wj_entity.get('wjzblist', [])
+        if not wjzb_list:
+            raise ValueError("Missing wjzblist in form data")
 
-        # Sort options by points (highest first)
-        q.options.sort(key=lambda x: x.points, reverse=True)
-        questions.append(q)
+        entries = wjzb_list[0].get('tklist', [])
+        if not entries:
+            raise ValueError("Missing tklist in form data")
+
+        for entry in entries:
+            q = Question(
+                is_choice=str(entry.get('tmlx', '')) == '1',
+                type=str(entry.get('tmlx', '')),
+                id=str(entry.get('tmid', '')),
+                options=[]
+            )
+
+            for opt in entry.get('tmxxlist', []):
+                try:
+                    q.options.append(Option(
+                        id=str(opt.get('tmxxid', '')),
+                        content=str(opt.get('xxmc', '')),
+                        points=float(opt.get('xxfz', 0))
+                    ))
+                except (ValueError, TypeError):
+                    # Skip invalid options
+                    continue
+
+            # Sort options by points (highest first)
+            q.options.sort(key=lambda x: x.points, reverse=True)
+            questions.append(q)
+
+    except (KeyError, IndexError, TypeError) as e:
+        raise ValueError(f"Failed to parse form data: {e}")
 
     return questions
 
@@ -120,8 +140,13 @@ def build_submission(
     answers: List[Optional[Option]],
     questions: List[Question]
 ) -> Dict[str, Any]:
-    """Build the submission payload"""
-    basic = form_data['pjxtPjjgPjjgckb'][1]
+    """Build the submission payload with error handling"""
+    # Safely get basic info
+    pjjgckb = form_data.get('pjxtPjjgPjjgckb', [])
+    if len(pjjgckb) < 2:
+        raise ValueError("Invalid pjxtPjjgPjjgckb structure")
+
+    basic = pjjgckb[1]
     choice_questions = [q for q in questions if q.is_choice]
     other_questions = [q for q in questions if not q.is_choice]
 

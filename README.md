@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/v/release/ZenAlexa/BUAA_TeachingEvaluation_2024Winter?style=flat-square)](https://github.com/ZenAlexa/BUAA_TeachingEvaluation_2024Winter/releases)
 [![License](https://img.shields.io/github/license/ZenAlexa/BUAA_TeachingEvaluation_2024Winter?style=flat-square)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.8+-blue?style=flat-square)](https://python.org)
+[![Python](https://img.shields.io/badge/python-3.9+-blue?style=flat-square)](https://python.org)
 
 北航教学评估助手 | BUAA Teaching Evaluation Assistant
 
@@ -78,8 +78,8 @@ python main.py
 
 ### Requirements | 环境要求
 
-- Python 3.8+
-- Node.js 18+
+- Python 3.9+
+- Node.js 20+
 
 ### Setup | 设置
 

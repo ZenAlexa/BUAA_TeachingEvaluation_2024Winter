@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import anime from 'animejs'
 import { Check, Github, ArrowRight } from 'lucide-react'
 import { useApi } from '@/hooks/useApi'
 import { useI18n } from '@/i18n'
@@ -11,6 +12,7 @@ import {
   LogViewer,
   ToastContainer,
   LanguageSwitch,
+  Logo,
   type LogEntry,
   type ToastData,
 } from '@/components'
@@ -18,6 +20,9 @@ import type { EvaluationMethod } from '@/types/api'
 import styles from './App.module.css'
 
 type AppState = 'login' | 'settings' | 'progress' | 'complete'
+
+// Application version
+const APP_VERSION = '1.2.0'
 
 export default function App() {
   const { ready, login, getTaskInfo, startEvaluation, openGithub } = useApi()
@@ -41,6 +46,68 @@ export default function App() {
   const [stats, setStats] = useState({ courses: 0, teachers: 0 })
   const [toasts, setToasts] = useState<ToastData[]>([])
 
+  // Refs for animations
+  const headerRef = useRef<HTMLElement>(null)
+  const footerRef = useRef<HTMLElement>(null)
+  const completeIconRef = useRef<HTMLDivElement>(null)
+  const statsRef = useRef<HTMLDivElement>(null)
+
+  // Use refs to avoid stale closures in global callbacks
+  const stateRef = useRef({ setState, setProgress, setLogs, setStats, setLoading })
+
+  // Update refs when functions change
+  useEffect(() => {
+    stateRef.current = { setState, setProgress, setLogs, setStats, setLoading }
+  })
+
+  // Header and footer entrance animation
+  useEffect(() => {
+    if (headerRef.current) {
+      anime({
+        targets: headerRef.current,
+        opacity: [0, 1],
+        translateY: [-20, 0],
+        easing: 'easeOutQuart',
+        duration: 600,
+        delay: 100,
+      })
+    }
+    if (footerRef.current) {
+      anime({
+        targets: footerRef.current,
+        opacity: [0, 1],
+        easing: 'easeOutQuart',
+        duration: 600,
+        delay: 400,
+      })
+    }
+  }, [])
+
+  // Complete state animation
+  useEffect(() => {
+    if (state === 'complete') {
+      if (completeIconRef.current) {
+        anime({
+          targets: completeIconRef.current,
+          scale: [0, 1.2, 1],
+          opacity: [0, 1],
+          easing: 'easeOutElastic(1, .6)',
+          duration: 800,
+        })
+      }
+      if (statsRef.current) {
+        anime({
+          targets: statsRef.current.querySelectorAll('[data-stat]'),
+          opacity: [0, 1],
+          translateY: [20, 0],
+          easing: 'easeOutQuart',
+          duration: 500,
+          delay: anime.stagger(100, { start: 400 }),
+        })
+      }
+    }
+  }, [state])
+
   const showToast = useCallback((message: string, type: ToastData['type'] = 'info') => {
     const id = Date.now()
     setToasts((prev) => [...prev, { id, message, type }])
@@ -50,31 +117,60 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
-  const addLog = useCallback((type: LogEntry['type'], message: string) => {
-    setLogs((prev) => [...prev, { id: Date.now(), type, message }])
-  }, [])
+  // Store showToast in ref for global callbacks
+  const showToastRef = useRef(showToast)
+  useEffect(() => {
+    showToastRef.current = showToast
+  }, [showToast])
 
-  if (typeof window !== 'undefined') {
-    (window as any).updateProgress = (current: number, total: number, course: string, teacher: string, special: boolean) => {
-      setProgress({ current, total })
-      addLog('success', `${course} - ${teacher}${special ? ' (min)' : ''}`)
-      setStats((prev) => ({
+  // Register global callback functions once on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    // Define global callbacks that Python backend can call
+    const windowAny = window as any
+
+    windowAny.updateProgress = (
+      current: number,
+      total: number,
+      course: string,
+      teacher: string,
+      special: boolean
+    ) => {
+      stateRef.current.setProgress({ current, total })
+      stateRef.current.setLogs((prev) => [
+        ...prev,
+        { id: Date.now(), type: 'success', message: `${course} - ${teacher}${special ? ' (min)' : ''}` }
+      ])
+      stateRef.current.setStats((prev) => ({
         courses: prev.courses + 1,
         teachers: prev.teachers + 1,
       }))
     }
-    ;(window as any).showComplete = () => {
-      setState('complete')
+
+    windowAny.showComplete = () => {
+      stateRef.current.setState('complete')
+      stateRef.current.setLoading(false)
     }
-    ;(window as any).showError = (message: string) => {
-      showToast(message, 'error')
-      setState('settings')
-      setLoading(false)
+
+    windowAny.showError = (message: string) => {
+      showToastRef.current(message, 'error')
+      stateRef.current.setState('settings')
+      stateRef.current.setLoading(false)
     }
-    ;(window as any).addLog = (type: LogEntry['type'], message: string) => {
-      addLog(type, message)
+
+    windowAny.addLog = (type: LogEntry['type'], message: string) => {
+      stateRef.current.setLogs((prev) => [...prev, { id: Date.now(), type, message }])
     }
-  }
+
+    // Cleanup on unmount
+    return () => {
+      delete windowAny.updateProgress
+      delete windowAny.showComplete
+      delete windowAny.showError
+      delete windowAny.addLog
+    }
+  }, [])
 
   const handleLogin = async () => {
     if (!username.trim() || !password) {
@@ -128,14 +224,14 @@ export default function App() {
 
   return (
     <div className={styles.app}>
-      <header className={styles.header}>
+      <header ref={headerRef} className={styles.header} style={{ opacity: 0 }}>
         <div className={styles.logo}>
-          <img src="./logo.png" alt="" className={styles.logoIcon} />
+          <Logo size={32} animate={true} />
           <span className={styles.logoText}>{t.appName}</span>
         </div>
         <div className={styles.headerRight}>
           <LanguageSwitch />
-          <span className={styles.version}>1.1.1</span>
+          <span className={styles.version}>{APP_VERSION}</span>
         </div>
       </header>
 
@@ -200,19 +296,19 @@ export default function App() {
         )}
 
         {state === 'complete' && (
-          <Card>
+          <Card animate={false}>
             <div className={styles.complete}>
-              <div className={styles.completeIcon}>
-                <Check size={24} />
+              <div ref={completeIconRef} className={styles.completeIcon} style={{ opacity: 0 }}>
+                <Check size={24} strokeWidth={3} />
               </div>
               <h2 className={styles.completeTitle}>{t.completeTitle}</h2>
               <p className={styles.completeSubtitle}>{t.completeSubtitle}</p>
-              <div className={styles.stats}>
-                <div className={styles.stat}>
+              <div ref={statsRef} className={styles.stats}>
+                <div className={styles.stat} data-stat>
                   <span className={styles.statValue}>{stats.courses}</span>
                   <span className={styles.statLabel}>{t.courses}</span>
                 </div>
-                <div className={styles.stat}>
+                <div className={styles.stat} data-stat>
                   <span className={styles.statValue}>{stats.teachers}</span>
                   <span className={styles.statLabel}>{t.teachers}</span>
                 </div>
@@ -226,7 +322,7 @@ export default function App() {
         )}
       </main>
 
-      <footer className={styles.footer}>
+      <footer ref={footerRef} className={styles.footer} style={{ opacity: 0 }}>
         <span>{t.footer}</span>
       </footer>
 

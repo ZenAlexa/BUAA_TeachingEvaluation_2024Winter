@@ -1,30 +1,75 @@
 .button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   font-weight: 500;
-  font-size: 14px;
+  font-size: var(--text-sm);
   border: 1px solid var(--gray-800);
-  transition: all 150ms ease;
+  border-radius: var(--radius-md);
   white-space: nowrap;
   user-select: none;
+  overflow: hidden;
+  transition:
+    background-color var(--transition-fast) var(--ease-out),
+    border-color var(--transition-fast) var(--ease-out),
+    color var(--transition-fast) var(--ease-out),
+    box-shadow var(--transition-fast) var(--ease-out),
+    transform var(--transition-fast) var(--ease-out);
+  will-change: transform;
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--black), 0 0 0 4px var(--blue-500);
 }
 
 .button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
+/* Content wrapper */
+.content {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Ripple effect */
+.ripple {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  transform: scale(0);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Variants */
 .primary {
   background: var(--white);
   color: var(--black);
   border-color: var(--white);
 }
 
+.primary .ripple {
+  background: rgba(0, 0, 0, 0.2);
+}
+
 .primary:not(:disabled):hover {
+  background: var(--gray-100);
+  border-color: var(--gray-100);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+}
+
+.primary:not(:disabled):active {
   background: var(--gray-200);
-  border-color: var(--gray-200);
 }
 
 .secondary {
@@ -33,9 +78,17 @@
   border-color: var(--gray-700);
 }
 
+.secondary .ripple {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .secondary:not(:disabled):hover {
   background: var(--gray-900);
   border-color: var(--gray-600);
+}
+
+.secondary:not(:disabled):active {
+  background: var(--gray-800);
 }
 
 .ghost {
@@ -44,13 +97,20 @@
   border-color: transparent;
 }
 
-.ghost:not(:disabled):hover {
-  color: var(--white);
+.ghost .ripple {
+  background: rgba(255, 255, 255, 0.1);
 }
 
+.ghost:not(:disabled):hover {
+  color: var(--white);
+  background: var(--gray-900);
+}
+
+/* Sizes */
 .sm {
   height: 32px;
   padding: 0 12px;
+  font-size: var(--text-xs);
 }
 
 .md {
@@ -61,18 +121,49 @@
 .lg {
   height: 48px;
   padding: 0 24px;
+  font-size: var(--text-base);
 }
 
+/* Loading dots animation */
 .loader {
-  width: 16px;
-  height: 16px;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  animation: spin 0.8s linear infinite;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+.loaderDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: loaderBounce 1.4s ease-in-out infinite both;
+}
+
+.loaderDot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loaderDot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.loaderDot:nth-child(3) {
+  animation-delay: 0s;
+}
+
+@keyframes loaderBounce {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.5;
   }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Icon animation on hover */
+.button:not(:disabled):hover .content svg {
+  transform: translateX(2px);
+  transition: transform var(--transition-fast) var(--ease-out);
 }

@@ -8,7 +8,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--white);
 }
@@ -16,32 +16,96 @@
 .hint {
   font-weight: 400;
   color: var(--gray-500);
+  font-size: var(--text-xs);
+}
+
+.inputWrapper {
+  position: relative;
 }
 
 .input {
   width: 100%;
-  height: 40px;
-  padding: 0 12px;
-  background: var(--black);
+  height: 44px;
+  padding: 0 14px;
+  background: var(--gray-950);
   border: 1px solid var(--gray-800);
+  border-radius: var(--radius-md);
   color: var(--white);
-  font-size: 14px;
-  transition: border-color 150ms ease;
+  font-size: var(--text-sm);
+  transition:
+    border-color var(--transition-fast) var(--ease-out),
+    background-color var(--transition-fast) var(--ease-out),
+    box-shadow var(--transition-fast) var(--ease-out);
 }
 
 .input::placeholder {
   color: var(--gray-600);
 }
 
-.input:focus {
-  border-color: var(--white);
+.input:hover:not(:focus):not(.error) {
+  border-color: var(--gray-700);
 }
 
-.input.error {
+.input:focus {
+  border-color: var(--blue-500);
+  background: var(--gray-900);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input.hasError {
   border-color: var(--error);
 }
 
+.input.hasError:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
 .errorText {
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
   color: var(--error);
+  animation: slideIn var(--transition-fast) var(--ease-out);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Password visibility toggle */
+.togglePassword {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: var(--gray-500);
+  transition: color var(--transition-fast);
+}
+
+.togglePassword:hover {
+  color: var(--gray-300);
+}
+
+/* Focus within wrapper */
+.wrapper:focus-within .label {
+  color: var(--blue-400);
+}
+
+/* Disabled state */
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--gray-900);
 }
