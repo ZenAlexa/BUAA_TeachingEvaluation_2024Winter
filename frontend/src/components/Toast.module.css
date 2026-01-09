@@ -20,7 +20,6 @@
   max-width: 400px;
   background: var(--gray-900);
   border: 1px solid var(--gray-700);
-  border-radius: var(--radius-lg);
   font-size: var(--text-sm);
   color: var(--white);
   box-shadow: var(--shadow-lg);
@@ -35,28 +34,20 @@
   border-color: var(--gray-600);
 }
 
-/* Icon wrapper */
 .iconWrapper {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: var(--radius-full);
   flex-shrink: 0;
 }
 
-.iconWrapper svg {
-  flex-shrink: 0;
-}
-
-/* Message */
 .message {
   flex: 1;
   line-height: 1.4;
 }
 
-/* Close button */
 .closeButton {
   position: absolute;
   top: 50%;
@@ -67,7 +58,6 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: var(--radius-sm);
   color: var(--gray-400);
   opacity: 0;
   transition: opacity var(--transition-fast),
@@ -84,23 +74,19 @@
   color: var(--white);
 }
 
-/* Progress bar */
 .progress {
   position: absolute;
   bottom: 0;
   left: 0;
-  height: 3px;
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  height: 2px;
   will-change: width;
 }
 
-/* Variants */
 .success {
   border-left: 3px solid var(--success);
 }
 
 .success .iconWrapper {
-  background: var(--success-bg);
   color: var(--success);
 }
 
@@ -113,7 +99,6 @@
 }
 
 .error .iconWrapper {
-  background: var(--error-bg);
   color: var(--error);
 }
 
@@ -122,16 +107,15 @@
 }
 
 .info {
-  border-left: 3px solid var(--blue-500);
+  border-left: 3px solid var(--gray-500);
 }
 
 .info .iconWrapper {
-  background: var(--info-bg);
-  color: var(--blue-400);
+  color: var(--gray-400);
 }
 
 .info .progress {
-  background: var(--blue-500);
+  background: var(--gray-500);
 }
 
 .warning {
@@ -139,7 +123,6 @@
 }
 
 .warning .iconWrapper {
-  background: var(--warning-bg);
   color: var(--warning);
 }
 
@@ -147,7 +130,6 @@
   background: var(--warning);
 }
 
-/* Responsive */
 @media (max-width: 480px) {
   .container {
     top: auto;

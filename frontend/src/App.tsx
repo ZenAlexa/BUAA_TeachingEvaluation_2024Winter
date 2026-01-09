@@ -22,8 +22,7 @@ import styles from './App.module.css'
 
 type AppState = 'login' | 'settings' | 'progress' | 'complete'
 
-// Application version
-const APP_VERSION = '1.5.0'
+const APP_VERSION = '1.6.0'
 
 export default function App() {
   const { ready, error: apiError, login, getTaskInfo, startEvaluation, openGithub } = useApi()

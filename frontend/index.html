@@ -5,33 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BUAA Eval</title>
 
-    <!--
-      CRITICAL: pywebview API detection script - MUST be FIRST in head
-      This captures pywebviewready event before React or any other scripts load.
-      The event may fire at ANY time, even before DOM is ready.
-    -->
     <script>
       (function() {
         'use strict';
 
-        // State management
         window.__pywebviewState = {
           apiReady: false,
           callbacks: []
         };
 
-        // Notify all waiting callbacks
         function notifyCallbacks() {
           var state = window.__pywebviewState;
           if (state.apiReady) return;
 
-          // Verify API actually exists
           if (!window.pywebview || !window.pywebview.api) return;
 
           state.apiReady = true;
           console.log('[pywebview] API ready, notifying callbacks');
 
-          // Run all waiting callbacks
           var cbs = state.callbacks;
           state.callbacks = [];
           for (var i = 0; i < cbs.length; i++) {
@@ -39,19 +30,16 @@
           }
         }
 
-        // Listen for pywebviewready event (may have already fired)
         window.addEventListener('pywebviewready', function() {
           console.log('[pywebview] pywebviewready event received');
           notifyCallbacks();
         });
 
-        // Check if already ready (edge case - event fired before script ran)
         if (window.pywebview && window.pywebview.api) {
           console.log('[pywebview] API already available');
           notifyCallbacks();
         }
 
-        // API for React to use
         window.__onPywebviewReady = function(callback) {
           var state = window.__pywebviewState;
           if (state.apiReady && window.pywebview && window.pywebview.api) {
@@ -65,20 +53,17 @@
       })();
     </script>
 
-    <!-- Inline critical styles for immediate loading feedback -->
     <style>
-      /* Base styles - prevent flash */
       html, body {
         margin: 0;
         padding: 0;
         background: #000;
         color: #fff;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
         min-height: 100vh;
         overflow: hidden;
       }
 
-      /* Initial loading screen */
       #initial-loader {
         position: fixed;
         inset: 0;
@@ -97,13 +82,11 @@
         pointer-events: none;
       }
 
-      /* Spinner */
       .loader-spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid #262626;
-        border-top-color: #3b82f6;
-        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        border: 2px solid #262626;
+        border-top-color: #fff;
         animation: spin 0.8s linear infinite;
       }
 
@@ -111,21 +94,19 @@
         to { transform: rotate(360deg); }
       }
 
-      /* Loading text */
       .loader-text {
         font-size: 14px;
         color: #737373;
         letter-spacing: 0.5px;
       }
 
-      /* Grid background */
       #initial-loader::before {
         content: '';
         position: absolute;
         inset: 0;
         background-image:
-          linear-gradient(#171717 1px, transparent 1px),
-          linear-gradient(90deg, #171717 1px, transparent 1px);
+          linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
         background-size: 64px 64px;
         pointer-events: none;
         z-index: -1;
@@ -133,19 +114,15 @@
     </style>
   </head>
   <body>
-    <!-- React mount point -->
     <div id="root"></div>
 
-    <!-- Initial loader - hidden by React when mounted -->
     <div id="initial-loader">
       <div class="loader-spinner"></div>
       <div class="loader-text">Loading...</div>
     </div>
 
-    <!-- React app - load after loader is visible -->
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Loader removal logic -->
     <script>
       (function() {
         'use strict';
@@ -153,7 +130,6 @@
         var loader = document.getElementById('initial-loader');
         if (!loader) return;
 
-        // Function to hide loader
         function hideLoader() {
           if (!loader || loader.classList.contains('fade-out')) return;
           loader.classList.add('fade-out');
@@ -162,10 +138,8 @@
           }, 300);
         }
 
-        // Global function for React to call
         window.__hideInitialLoader = hideLoader;
 
-        // Fallback: hide after 10 seconds regardless
         setTimeout(hideLoader, 10000);
       })();
     </script>

@@ -8,25 +8,23 @@
   z-index: var(--z-modal);
 }
 
-/* Grid background */
 .container::before {
   content: '';
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(var(--gray-900) 1px, transparent 1px),
-    linear-gradient(90deg, var(--gray-900) 1px, transparent 1px);
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
   background-size: var(--grid-size) var(--grid-size);
   pointer-events: none;
   z-index: -1;
 }
 
-/* Subtle gradient overlay */
 .container::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 60%);
+  background: radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
   pointer-events: none;
   z-index: -1;
 }
@@ -44,7 +42,6 @@
   letter-spacing: 0.5px;
 }
 
-/* Error display */
 .errorContainer {
   display: flex;
   flex-direction: column;

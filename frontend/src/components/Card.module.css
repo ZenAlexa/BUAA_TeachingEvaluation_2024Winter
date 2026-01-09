@@ -1,11 +1,9 @@
 .card {
   background: var(--gray-950);
   border: 1px solid var(--gray-800);
-  border-radius: var(--radius-lg);
   overflow: hidden;
   will-change: transform, opacity;
-  transition: border-color var(--transition-normal) var(--ease-out),
-              box-shadow var(--transition-normal) var(--ease-out);
+  transition: border-color var(--transition-normal) var(--ease-out);
 }
 
 .card:hover {
@@ -15,7 +13,6 @@
 .header {
   padding: 24px 24px 16px;
   border-bottom: 1px solid var(--gray-800);
-  background: linear-gradient(180deg, rgba(38, 38, 38, 0.5) 0%, transparent 100%);
 }
 
 .title {
@@ -23,7 +20,7 @@
   font-weight: 600;
   color: var(--white);
   margin-bottom: 4px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .subtitle {
@@ -36,15 +33,6 @@
   padding: 24px;
 }
 
-/* Glass variant */
-.glass {
-  background: rgba(10, 10, 10, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-/* Glow on focus-within */
 .card:focus-within {
-  border-color: var(--blue-500);
-  box-shadow: 0 0 0 1px var(--blue-500), var(--shadow-glow-sm);
+  border-color: var(--white);
 }

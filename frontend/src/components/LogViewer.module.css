@@ -38,7 +38,7 @@
 }
 
 .success .icon {
-  color: var(--success);
+  color: var(--gray-400);
 }
 
 .error .icon {
@@ -46,7 +46,7 @@
 }
 
 .info .icon {
-  color: var(--blue);
+  color: var(--gray-500);
 }
 
 .warning .icon {

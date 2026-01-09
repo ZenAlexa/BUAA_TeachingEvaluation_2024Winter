@@ -7,7 +7,6 @@
   font-weight: 500;
   font-size: var(--text-sm);
   border: 1px solid var(--gray-800);
-  border-radius: var(--radius-md);
   white-space: nowrap;
   user-select: none;
   overflow: hidden;
@@ -22,7 +21,7 @@
 
 .button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--black), 0 0 0 4px var(--blue-500);
+  box-shadow: 0 0 0 2px var(--black), 0 0 0 4px var(--white);
 }
 
 .button:disabled {
@@ -31,7 +30,6 @@
   pointer-events: none;
 }
 
-/* Content wrapper */
 .content {
   display: inline-flex;
   align-items: center;
@@ -40,18 +38,15 @@
   z-index: 1;
 }
 
-/* Ripple effect */
 .ripple {
   position: absolute;
   width: 100px;
   height: 100px;
-  border-radius: 50%;
   transform: scale(0);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Variants */
 .primary {
   background: var(--white);
   color: var(--black);
@@ -63,13 +58,12 @@
 }
 
 .primary:not(:disabled):hover {
-  background: var(--gray-100);
-  border-color: var(--gray-100);
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+  background: var(--gray-200);
+  border-color: var(--gray-200);
 }
 
 .primary:not(:disabled):active {
-  background: var(--gray-200);
+  background: var(--gray-300);
 }
 
 .secondary {
@@ -106,7 +100,6 @@
   background: var(--gray-900);
 }
 
-/* Sizes */
 .sm {
   height: 32px;
   padding: 0 12px;
@@ -124,7 +117,6 @@
   font-size: var(--text-base);
 }
 
-/* Loading dots animation */
 .loader {
   display: flex;
   align-items: center;
@@ -134,7 +126,6 @@
 .loaderDot {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
   background: currentColor;
   animation: loaderBounce 1.4s ease-in-out infinite both;
 }
@@ -162,7 +153,6 @@
   }
 }
 
-/* Icon animation on hover */
 .button:not(:disabled):hover .content svg {
   transform: translateX(2px);
   transition: transform var(--transition-fast) var(--ease-out);

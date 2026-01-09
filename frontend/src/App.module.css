@@ -7,7 +7,6 @@
   padding: 24px;
 }
 
-/* Header */
 .header {
   display: flex;
   justify-content: space-between;
@@ -27,7 +26,7 @@
 .logoText {
   font-size: var(--text-sm);
   font-weight: 500;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   color: var(--white);
 }
 
@@ -43,24 +42,21 @@
   font-family: var(--font-mono);
   padding: 4px 8px;
   background: var(--gray-900);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-800);
 }
 
-/* Main content */
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-/* Form layout */
 .form {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* Footer */
 .footer {
   text-align: center;
   padding: 24px 0;
@@ -70,7 +66,6 @@
   will-change: opacity;
 }
 
-/* Complete state */
 .complete {
   text-align: center;
   padding: 48px 24px;
@@ -79,18 +74,16 @@
 .completeIcon {
   width: 64px;
   height: 64px;
-  background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-600) 100%);
-  border-radius: var(--radius-lg);
+  background: var(--white);
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 24px;
-  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
   will-change: transform, opacity;
 }
 
 .completeIcon svg {
-  color: var(--white);
+  color: var(--black);
 }
 
 .completeTitle {
@@ -98,7 +91,7 @@
   font-weight: 600;
   margin-bottom: 8px;
   color: var(--white);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .completeSubtitle {
@@ -108,7 +101,6 @@
   line-height: 1.5;
 }
 
-/* Stats */
 .stats {
   display: flex;
   justify-content: center;
@@ -127,12 +119,8 @@
   font-weight: 600;
   color: var(--white);
   font-family: var(--font-mono);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   line-height: 1.2;
-  background: linear-gradient(180deg, var(--white) 0%, var(--gray-300) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .statLabel {
@@ -140,9 +128,10 @@
   color: var(--gray-500);
   margin-top: 4px;
   display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-/* Responsive adjustments for 4K */
 @media (min-width: 2560px) {
   .app {
     max-width: 560px;
@@ -157,7 +146,6 @@
   }
 }
 
-/* Small screen adjustments */
 @media (max-width: 480px) {
   .app {
     padding: 16px;
