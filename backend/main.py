@@ -3,7 +3,7 @@
 Desktop application entry point
 Cross-platform GUI using pywebview
 
-Version: 1.3.0
+Version: 1.4.0
 - Optimized startup using webview.start(func) pattern
 - Added window.events for proper lifecycle management
 - Background session pre-warming for faster first login
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 # Application constants
 APP_TITLE = 'BUAA Evaluation'
-APP_VERSION = '1.3.0'
+APP_VERSION = '1.4.0'
 WINDOW_WIDTH = 520
 WINDOW_HEIGHT = 720
 MIN_WIDTH = 400

@@ -115,6 +115,10 @@ cd backend && python main.py
    - Add HTML loading spinner in index.html
    - Use lazy session initialization
    - Pre-warm session in background after window shows
+6. **Windows stuck on "Initializing"** (v1.4.0 fix):
+   - **Root cause**: `pywebviewready` event fires before React useEffect registers listener
+   - **Solution**: Early event capture in `index.html` before React loads
+   - See `frontend/index.html` and `frontend/src/hooks/useApi.ts`
 
 ## Platform-Specific Notes
 
@@ -122,6 +126,7 @@ cd backend && python main.py
 - EdgeChromium is preferred (auto-detected)
 - DPI awareness enabled for 4K displays
 - Avoid `import clr` checks (slow)
+- **pywebviewready event timing**: May fire before React mounts - use early capture mechanism
 
 ### macOS
 - Cocoa WebKit is used (auto-detected)

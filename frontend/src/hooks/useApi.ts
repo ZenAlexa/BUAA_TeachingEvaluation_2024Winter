@@ -1,8 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { PyWebViewAPI, LoginResult, TaskInfo, EvaluationMethod } from '@/types/api'
 
+declare global {
+  interface Window {
+    __pywebviewApiReady?: boolean
+    __onPywebviewReady?: (callback: () => void) => void
+  }
+}
+
 /**
- * Hook to access the pywebview API with ready state handling
+ * Hook to access the pywebview API
+ *
+ * Uses early event capture from index.html to handle race condition
+ * where pywebviewready fires before React mounts
  */
 export function useApi() {
   const [ready, setReady] = useState(false)
@@ -16,15 +26,20 @@ export function useApi() {
       }
     }
 
+    // Check if already ready
     if (window.pywebview?.api) {
       handleReady()
-    } else {
-      window.addEventListener('pywebviewready', handleReady)
+      return
     }
 
-    return () => {
-      window.removeEventListener('pywebviewready', handleReady)
+    // Use early capture mechanism from index.html
+    if (window.__onPywebviewReady) {
+      window.__onPywebviewReady(handleReady)
     }
+
+    // Also listen for event (belt and suspenders)
+    window.addEventListener('pywebviewready', handleReady)
+    return () => window.removeEventListener('pywebviewready', handleReady)
   }, [])
 
   const login = useCallback(
@@ -53,11 +68,5 @@ export function useApi() {
     return api.open_github()
   }, [api])
 
-  return {
-    ready,
-    login,
-    getTaskInfo,
-    startEvaluation,
-    openGithub,
-  }
+  return { ready, login, getTaskInfo, startEvaluation, openGithub }
 }

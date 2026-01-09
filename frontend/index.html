@@ -94,35 +94,61 @@
     </div>
 
     <script>
-      // Remove loader when React app mounts (DOM changes in #root)
+      // Early capture of pywebviewready event - BEFORE React loads
+      // Solves race condition: event may fire before React mounts
+      (function() {
+        window.__pywebviewApiReady = false;
+        window.__pywebviewReadyCallbacks = [];
+
+        function notifyReady() {
+          if (window.__pywebviewApiReady) return;
+          window.__pywebviewApiReady = true;
+          var cbs = window.__pywebviewReadyCallbacks;
+          window.__pywebviewReadyCallbacks = [];
+          for (var i = 0; i < cbs.length; i++) {
+            try { cbs[i](); } catch (e) {}
+          }
+        }
+
+        // Capture event immediately
+        window.addEventListener('pywebviewready', notifyReady);
+
+        // Check if already ready (edge case)
+        if (window.pywebview && window.pywebview.api) notifyReady();
+
+        // API for React to use
+        window.__onPywebviewReady = function(cb) {
+          if (window.__pywebviewApiReady && window.pywebview && window.pywebview.api) {
+            cb();
+          } else {
+            window.__pywebviewReadyCallbacks.push(cb);
+          }
+        };
+      })();
+
+      // Remove loader when React mounts
       (function() {
         var loader = document.getElementById('initial-loader');
         var root = document.getElementById('root');
         if (!loader || !root) return;
 
-        // Use MutationObserver for reliable detection
-        var observer = new MutationObserver(function(mutations) {
+        var observer = new MutationObserver(function() {
           if (root.children.length > 0) {
-            loader.classList.add('loader-fade-out');
-            setTimeout(function() {
-              loader.remove();
-            }, 300);
             observer.disconnect();
+            loader.classList.add('loader-fade-out');
+            setTimeout(function() { loader.remove(); }, 300);
           }
         });
-
         observer.observe(root, { childList: true });
 
-        // Fallback: remove loader after max 15 seconds
+        // Fallback timeout
         setTimeout(function() {
           if (loader.parentNode) {
+            observer.disconnect();
             loader.classList.add('loader-fade-out');
-            setTimeout(function() {
-              loader.remove();
-            }, 300);
+            setTimeout(function() { loader.remove(); }, 300);
           }
-          observer.disconnect();
-        }, 15000);
+        }, 8000);
       })();
     </script>
   </body>
