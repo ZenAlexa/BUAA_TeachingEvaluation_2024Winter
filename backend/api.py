@@ -2,20 +2,20 @@
 API bridge between frontend and backend
 Exposes Python methods to JavaScript via pywebview
 
-Version: 1.3.0
-- Optimized: Lazy session initialization for faster startup
-- Optimized: Background session pre-warming after window shown
-- Fixed: Main thread blocking causing app freeze
-- Fixed: Added request timeouts to prevent hangs
-- Fixed: Thread-safe frontend callbacks
-- Improved: Better error handling and logging
+Version: 1.5.0
+- Added is_ready() for frontend polling (fixes pywebviewready race condition)
+- Added mark_ready() called by main.py on DOM loaded
+- Simplified thread safety with proper locking
+- Removed unused session pre-warming (caused issues)
+- All methods are now safe to call from any thread
 """
 
+import json
 import logging
 import threading
 import time
 import webbrowser
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional
 from urllib.parse import quote
 
 import requests
@@ -26,43 +26,32 @@ from bs4 import BeautifulSoup
 from evaluator import fill_form
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
 # Request configuration
-REQUEST_TIMEOUT = (10, 30)  # (connect timeout, read timeout)
+REQUEST_TIMEOUT = (10, 30)  # (connect, read)
 MAX_RETRIES = 3
 RETRY_BACKOFF = 0.5
-EVALUATION_DELAY = 0.8  # Delay between evaluations (seconds)
+EVALUATION_DELAY = 0.8
 
 
-def create_session() -> requests.Session:
-    """Create a requests session with retry logic and connection pooling"""
+def _create_session() -> requests.Session:
+    """Create HTTP session with retry logic"""
     session = requests.Session()
 
-    # Configure retry strategy
-    retry_strategy = Retry(
+    retry = Retry(
         total=MAX_RETRIES,
         backoff_factor=RETRY_BACKOFF,
         status_forcelist=[429, 500, 502, 503, 504],
         allowed_methods=["GET", "POST"]
     )
 
-    adapter = HTTPAdapter(
-        max_retries=retry_strategy,
-        pool_connections=10,
-        pool_maxsize=10
-    )
-
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
     session.mount("http://", adapter)
     session.mount("https://", adapter)
 
-    # Set default headers
     session.headers.update({
-        'User-Agent': 'BUAA-Evaluation/1.3.0',
+        'User-Agent': 'BUAA-Evaluation/1.5.0',
         'Accept': 'application/json, text/html, */*',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
     })
@@ -71,126 +60,126 @@ def create_session() -> requests.Session:
 
 
 class EvaluationAPI:
-    """API class exposed to JavaScript frontend
-
-    Thread-safe implementation with non-blocking evaluation process.
-    Uses lazy initialization for faster startup.
-    """
+    """API class exposed to JavaScript frontend via pywebview"""
 
     BASE_URL = "https://spoc.buaa.edu.cn/pjxt/"
     LOGIN_URL = f"https://sso.buaa.edu.cn/login?service={quote(BASE_URL, 'utf-8')}cas"
     GITHUB_URL = "https://github.com/ZenAlexa/BUAA_TeachingEvaluation_2024Winter"
 
     def __init__(self):
-        # Lazy session initialization for faster startup
+        self._window = None
         self._session: Optional[requests.Session] = None
-        self.window = None
+        self._ready = False
         self._evaluation_thread: Optional[threading.Thread] = None
-        self._stop_evaluation = threading.Event()
-        self._lock = threading.Lock()
+        self._stop_event = threading.Event()
+
+        # Locks for thread safety
+        self._lock = threading.RLock()
         self._session_lock = threading.Lock()
+
+    # ========== Ready State Management ==========
+
+    def mark_ready(self) -> None:
+        """Called by main.py when DOM is loaded"""
+        with self._lock:
+            self._ready = True
+            logger.info("API marked as ready")
+
+    def is_ready(self) -> bool:
+        """
+        Check if API is ready - called by frontend via polling.
+        This is the PRIMARY mechanism for frontend initialization.
+        """
+        with self._lock:
+            return self._ready
+
+    def set_window(self, window) -> None:
+        """Store window reference for JS callbacks"""
+        with self._lock:
+            self._window = window
+            logger.debug("Window reference set")
+
+    # ========== HTTP Session Management ==========
 
     @property
     def session(self) -> requests.Session:
         """Lazily create session on first use"""
         if self._session is None:
             with self._session_lock:
-                # Double-check locking pattern
                 if self._session is None:
-                    logger.info("Creating HTTP session (lazy init)")
-                    self._session = create_session()
+                    logger.debug("Creating HTTP session")
+                    self._session = _create_session()
         return self._session
 
-    def set_window(self, window) -> None:
-        """Set reference to pywebview window"""
-        with self._lock:
-            self.window = window
-
-    def _safe_request(
+    def _request(
         self,
         method: str,
         url: str,
         timeout: tuple = REQUEST_TIMEOUT,
         **kwargs
     ) -> Optional[requests.Response]:
-        """Make a request with timeout and error handling"""
+        """Make HTTP request with error handling"""
         try:
-            response = self.session.request(
-                method,
-                url,
-                timeout=timeout,
-                **kwargs
-            )
-            response.raise_for_status()
-            return response
+            resp = self.session.request(method, url, timeout=timeout, **kwargs)
+            resp.raise_for_status()
+            return resp
         except requests.exceptions.Timeout:
-            logger.error(f"Request timeout: {url}")
-            return None
+            logger.error(f"Timeout: {url}")
         except requests.exceptions.ConnectionError:
             logger.error(f"Connection error: {url}")
-            return None
         except requests.exceptions.HTTPError as e:
-            logger.error(f"HTTP error {e.response.status_code}: {url}")
-            return None
+            logger.error(f"HTTP {e.response.status_code}: {url}")
         except Exception as e:
             logger.error(f"Request failed: {url} - {e}")
-            return None
+        return None
+
+    # ========== Authentication ==========
 
     def _get_login_token(self) -> Optional[str]:
-        """Fetch login token from SSO page"""
-        response = self._safe_request('GET', self.LOGIN_URL)
-        if not response:
+        """Fetch SSO login token"""
+        resp = self._request('GET', self.LOGIN_URL)
+        if not resp:
             return None
-
         try:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            token_input = soup.find('input', {'name': 'execution'})
-            return token_input['value'] if token_input else None
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            token = soup.find('input', {'name': 'execution'})
+            return token['value'] if token else None
         except Exception as e:
-            logger.error(f"Failed to parse login token: {e}")
+            logger.error(f"Token parse failed: {e}")
             return None
 
     def login(self, username: str, password: str) -> Dict[str, Any]:
         """
-        Authenticate with SSO
-
-        Args:
-            username: Student ID
-            password: SSO password
-
-        Returns:
-            Dict with success status and message
+        Authenticate with SSO.
+        Returns: {success: bool, message: str}
         """
         if not username or not password:
-            return {'success': False, 'message': 'Username and password required'}
+            return {'success': False, 'message': 'Credentials required'}
 
         try:
             token = self._get_login_token()
             if not token:
                 return {'success': False, 'message': 'Failed to get login token'}
 
-            payload = {
-                'username': username,
-                'password': password,
-                'execution': token,
-                '_eventId': 'submit',
-                'type': 'username_password',
-                'submit': 'LOGIN'
-            }
-
-            response = self._safe_request(
+            resp = self._request(
                 'POST',
                 self.LOGIN_URL,
-                data=payload,
+                data={
+                    'username': username,
+                    'password': password,
+                    'execution': token,
+                    '_eventId': 'submit',
+                    'type': 'username_password',
+                    'submit': 'LOGIN'
+                },
                 allow_redirects=True
             )
 
-            if not response:
+            if not resp:
                 return {'success': False, 'message': 'Login request failed'}
 
-            # Check for successful login indicator
-            if '未评价不可查看课表' in response.text:
-                logger.info(f"Login successful for user: {username}")
+            if '未评价不可查看课表' in resp.text:
+                logger.info(f"Login successful: {username}")
                 return {'success': True, 'message': 'Login successful'}
 
             return {'success': False, 'message': 'Invalid credentials'}
@@ -199,25 +188,18 @@ class EvaluationAPI:
             logger.error(f"Login error: {e}")
             return {'success': False, 'message': str(e)}
 
-    def get_task_info(self) -> Dict[str, Any]:
-        """
-        Get current evaluation task information
+    # ========== Task Info ==========
 
-        Returns:
-            Dict with task details or error message
-        """
+    def get_task_info(self) -> Dict[str, Any]:
+        """Get current evaluation task info"""
         try:
             url = f"{self.BASE_URL}personnelEvaluation/listObtainPersonnelEvaluationTasks"
-            response = self._safe_request(
-                'GET',
-                url,
-                params={'pageNum': 1, 'pageSize': 1}
-            )
+            resp = self._request('GET', url, params={'pageNum': 1, 'pageSize': 1})
 
-            if not response:
+            if not resp:
                 return {'success': False, 'message': 'Failed to get task info'}
 
-            data = response.json()
+            data = resp.json()
             if data.get('result', {}).get('total', 0) == 0:
                 return {'success': False, 'message': 'No active tasks'}
 
@@ -227,75 +209,61 @@ class EvaluationAPI:
                 'task_id': task['rwid'],
                 'task_name': task['rwmc']
             }
-
         except Exception as e:
-            logger.error(f"Get task info error: {e}")
+            logger.error(f"Task info error: {e}")
             return {'success': False, 'message': str(e)}
 
+    # ========== Evaluation Process ==========
+
     def _get_questionnaires(self, task_id: str) -> List[Dict]:
-        """Get questionnaire list for a task"""
+        """Get questionnaires for task"""
         url = f"{self.BASE_URL}evaluationMethodSix/getQuestionnaireListToTask"
-        response = self._safe_request(
-            'GET',
-            url,
-            params={'rwid': task_id, 'pageNum': 1, 'pageSize': 999}
-        )
-
-        if not response:
+        resp = self._request('GET', url, params={'rwid': task_id, 'pageNum': 1, 'pageSize': 999})
+        if not resp:
             return []
-
         try:
-            return response.json().get('result', [])
+            return resp.json().get('result', [])
         except Exception:
             return []
 
-    def _set_questionnaire_mode(self, questionnaire: Dict) -> bool:
+    def _set_questionnaire_mode(self, q: Dict) -> bool:
         """Set questionnaire to evaluation mode"""
         try:
-            msid = questionnaire.get('msid')
+            msid = q.get('msid')
             if msid in ['1', '2']:
                 endpoint = 'reviseQuestionnairePattern'
             elif msid is None:
                 endpoint = 'confirmQuestionnairePattern'
             else:
-                return True  # No action needed
+                return True
 
             url = f"{self.BASE_URL}evaluationMethodSix/{endpoint}"
-            response = self._safe_request(
-                'POST',
-                url,
-                json={
-                    'wjid': questionnaire['wjid'],
-                    'msid': 1,
-                    'rwid': questionnaire['rwid']
-                }
-            )
-            return response is not None
+            resp = self._request('POST', url, json={
+                'wjid': q['wjid'],
+                'msid': 1,
+                'rwid': q['rwid']
+            })
+            return resp is not None
         except Exception as e:
-            logger.error(f"Set questionnaire mode error: {e}")
+            logger.error(f"Set mode error: {e}")
             return False
 
-    def _get_courses(self, questionnaire_id: str) -> List[Dict]:
-        """Get course list for a questionnaire"""
+    def _get_courses(self, qid: str) -> List[Dict]:
+        """Get courses for questionnaire"""
         url = f"{self.BASE_URL}evaluationMethodSix/getRequiredReviewsData"
-        response = self._safe_request(
-            'GET',
-            url,
-            params={'sfyp': 0, 'wjid': questionnaire_id, 'pageNum': 1, 'pageSize': 999}
-        )
-
-        if not response:
+        resp = self._request('GET', url, params={
+            'sfyp': 0, 'wjid': qid, 'pageNum': 1, 'pageSize': 999
+        })
+        if not resp:
             return []
-
         try:
-            return response.json().get('result', [])
+            return resp.json().get('result', [])
         except Exception:
             return []
 
     def _evaluate_course(self, course: Dict, method: str) -> bool:
-        """Submit evaluation for a single course"""
+        """Submit evaluation for one course"""
         try:
-            # Build query params
             params = {
                 'rwid': course['rwid'],
                 'wjid': course['wjid'],
@@ -309,113 +277,86 @@ class EvaluationAPI:
                 'rwh': course['rwh']
             }
 
-            # Get questionnaire topics
             query = '&'.join(f"{k}={quote(str(v))}" for k, v in params.items())
             url = f"{self.BASE_URL}evaluationMethodSix/getQuestionnaireTopic?{query}"
-            response = self._safe_request('GET', url)
+            resp = self._request('GET', url)
 
-            if not response:
+            if not resp:
                 return False
 
-            topics = response.json().get('result', [])
+            topics = resp.json().get('result', [])
             if not topics:
                 return False
 
-            # Generate and submit evaluation
             submission = fill_form(topics[0], method)
             submit_url = f"{self.BASE_URL}evaluationMethodSix/submitSaveEvaluation"
-            submit_response = self._safe_request('POST', submit_url, json=submission)
+            submit_resp = self._request('POST', submit_url, json=submission)
 
-            if not submit_response:
+            if not submit_resp:
                 return False
 
-            return submit_response.json().get('msg') == '成功'
+            return submit_resp.json().get('msg') == '成功'
 
         except Exception as e:
-            logger.error(f"Evaluate course error: {e}")
+            logger.error(f"Evaluate error: {e}")
             return False
 
-    def _python_to_js(self, value: Any) -> str:
-        """
-        Convert Python value to JavaScript literal string.
+    # ========== Frontend Callbacks ==========
 
-        Handles:
-        - bool: True -> 'true', False -> 'false'
-        - None: -> 'null'
-        - str: -> quoted string with escaped characters
-        - numbers: -> as-is
-        - lists/dicts: -> JSON
-        """
-        import json
+    def _to_js(self, value: Any) -> str:
+        """Convert Python value to JavaScript literal"""
         if value is None:
             return 'null'
-        elif isinstance(value, bool):
+        if isinstance(value, bool):
             return 'true' if value else 'false'
-        elif isinstance(value, str):
-            # Use json.dumps to properly escape strings
+        if isinstance(value, str):
             return json.dumps(value, ensure_ascii=False)
-        elif isinstance(value, (int, float)):
+        if isinstance(value, (int, float)):
             return str(value)
-        else:
-            # For complex types, use JSON serialization
-            return json.dumps(value, ensure_ascii=False)
+        return json.dumps(value, ensure_ascii=False)
 
-    def _call_frontend(self, func: str, *args) -> None:
-        """Execute JavaScript function in frontend (thread-safe)"""
+    def _call_js(self, func: str, *args) -> None:
+        """Call JavaScript function (thread-safe)"""
         with self._lock:
-            if self.window:
-                try:
-                    args_str = ', '.join(self._python_to_js(arg) for arg in args)
-                    js_code = f"{func}({args_str})"
-                    logger.debug(f"Calling frontend: {js_code}")
-                    # Use evaluate_js which is thread-safe in pywebview >= 4.0
-                    self.window.evaluate_js(js_code)
-                except Exception as e:
-                    logger.error(f"Frontend callback error: {e}")
+            if not self._window:
+                return
+            try:
+                args_str = ', '.join(self._to_js(arg) for arg in args)
+                js = f"{func}({args_str})"
+                logger.debug(f"JS call: {js[:100]}")
+                self._window.evaluate_js(js)
+            except Exception as e:
+                logger.error(f"JS call failed: {e}")
 
-    def _run_evaluation(
-        self,
-        method: str,
-        special_teachers: List[str]
-    ) -> None:
-        """
-        Internal evaluation process (runs in background thread)
+    # ========== Evaluation Runner ==========
 
-        Args:
-            method: Evaluation method
-            special_teachers: List of teachers for special evaluation
-        """
+    def _run_evaluation(self, method: str, special_teachers: List[str]) -> None:
+        """Background evaluation thread"""
         try:
-            # Get task info
-            task_result = self.get_task_info()
-            if not task_result['success']:
-                self._call_frontend('showError', task_result['message'])
+            task = self.get_task_info()
+            if not task['success']:
+                self._call_js('showError', task['message'])
                 return
 
-            task_id = task_result['task_id']
-            questionnaires = self._get_questionnaires(task_id)
-
+            questionnaires = self._get_questionnaires(task['task_id'])
             if not questionnaires:
-                self._call_frontend('showError', 'No questionnaires found')
+                self._call_js('showError', 'No questionnaires found')
                 return
 
-            # Collect all pending courses
-            pending_courses = []
+            # Collect pending courses
+            pending = []
             for q in questionnaires:
-                if self._stop_evaluation.is_set():
+                if self._stop_event.is_set():
                     return
-
                 self._set_questionnaire_mode(q)
-                courses = self._get_courses(q['wjid'])
-                for c in courses:
-                    # Check if not yet evaluated
+                for c in self._get_courses(q['wjid']):
                     if c.get('ypjcs') != c.get('xypjcs'):
-                        pending_courses.append(c)
+                        pending.append(c)
 
-            total = len(pending_courses)
+            total = len(pending)
             if total == 0:
-                self._call_frontend('addLog', 'info', 'All courses already evaluated')
-                self._call_frontend('showComplete')
+                self._call_js('addLog', 'info', 'All courses already evaluated')
+                self._call_js('showComplete')
                 return
 
             current = 0
@@ -423,96 +364,70 @@ class EvaluationAPI:
 
             # Process special teachers first
             if special_set:
-                self._call_frontend('addLog', 'info', '-- Special Teachers --')
-                for course in pending_courses:
-                    if self._stop_evaluation.is_set():
+                self._call_js('addLog', 'info', '-- Special Teachers --')
+                for course in pending:
+                    if self._stop_event.is_set():
                         return
-
                     teacher = course.get('pjrxm', 'Unknown')
                     if teacher in special_set:
                         success = self._evaluate_course(course, 'worst_passing')
                         current += 1
                         if success:
-                            self._call_frontend(
-                                'updateProgress',
-                                current, total,
-                                course['kcmc'], teacher, True
-                            )
+                            self._call_js('updateProgress', current, total,
+                                         course['kcmc'], teacher, True)
                         else:
-                            self._call_frontend(
-                                'addLog', 'error',
-                                f"Failed: {course['kcmc']} - {teacher}"
-                            )
+                            self._call_js('addLog', 'error',
+                                         f"Failed: {course['kcmc']} - {teacher}")
                         time.sleep(EVALUATION_DELAY)
 
-            # Process remaining teachers
-            self._call_frontend('addLog', 'info', '-- Other Teachers --')
-            for course in pending_courses:
-                if self._stop_evaluation.is_set():
+            # Process other teachers
+            self._call_js('addLog', 'info', '-- Other Teachers --')
+            for course in pending:
+                if self._stop_event.is_set():
                     return
-
                 teacher = course.get('pjrxm', 'Unknown')
                 if teacher not in special_set:
                     success = self._evaluate_course(course, method)
                     current += 1
                     if success:
-                        self._call_frontend(
-                            'updateProgress',
-                            current, total,
-                            course['kcmc'], teacher, False
-                        )
+                        self._call_js('updateProgress', current, total,
+                                     course['kcmc'], teacher, False)
                     else:
-                        self._call_frontend(
-                            'addLog', 'error',
-                            f"Failed: {course['kcmc']} - {teacher}"
-                        )
+                        self._call_js('addLog', 'error',
+                                     f"Failed: {course['kcmc']} - {teacher}")
                     time.sleep(EVALUATION_DELAY)
 
-            self._call_frontend('showComplete')
-            logger.info(f"Evaluation completed: {current}/{total} courses")
+            self._call_js('showComplete')
+            logger.info(f"Completed: {current}/{total}")
 
         except Exception as e:
             logger.error(f"Evaluation error: {e}")
-            self._call_frontend('showError', str(e))
+            self._call_js('showError', str(e))
 
     def start_evaluation(self, method: str, special_teachers: List[str]) -> None:
-        """
-        Start the evaluation process (non-blocking)
-
-        Args:
-            method: Evaluation method ('good', 'random', 'worst_passing')
-            special_teachers: List of teachers to evaluate with minimum passing
-
-        Note:
-            This method returns immediately and runs evaluation in a background thread.
-            Progress updates are sent via frontend callbacks.
-        """
-        # Stop any existing evaluation
+        """Start evaluation (non-blocking)"""
         self.stop_evaluation()
+        self._stop_event.clear()
 
-        # Reset stop flag
-        self._stop_evaluation.clear()
-
-        # Start evaluation in background thread
         self._evaluation_thread = threading.Thread(
             target=self._run_evaluation,
             args=(method, special_teachers),
             daemon=True,
-            name="EvaluationThread"
+            name="Evaluation"
         )
         self._evaluation_thread.start()
-        logger.info(f"Started evaluation with method: {method}")
+        logger.info(f"Started evaluation: {method}")
 
     def stop_evaluation(self) -> None:
-        """Stop the current evaluation process"""
+        """Stop current evaluation"""
         if self._evaluation_thread and self._evaluation_thread.is_alive():
-            self._stop_evaluation.set()
+            self._stop_event.set()
             self._evaluation_thread.join(timeout=2.0)
             logger.info("Evaluation stopped")
 
     def open_github(self) -> None:
-        """Open project GitHub page in browser"""
+        """Open GitHub page"""
         try:
             webbrowser.open(self.GITHUB_URL)
         except Exception as e:
-            logger.error(f"Failed to open GitHub: {e}")
+            logger.error(f"Open GitHub failed: {e}")

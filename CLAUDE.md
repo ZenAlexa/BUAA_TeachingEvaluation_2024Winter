@@ -32,37 +32,44 @@ frontend/
 
 ## Key Patterns
 
-### pywebview Best Practices
+### pywebview Best Practices (v1.5.0)
 
 **CRITICAL**: Follow these patterns to prevent "Not Responding" issues:
 
-1. **Use `webview.start(func, args)` pattern** - Pass startup function to run in background thread:
+1. **DO NOT use `http_server=True`** - It causes Windows to freeze:
    ```python
-   def on_startup(window, api):
-       # Runs in background thread - GUI stays responsive
-       window.events.shown += on_shown_handler
+   # BAD - causes freezing
+   webview.start(http_server=True)
 
-   webview.start(func=on_startup, args=(window, api))
+   # GOOD - use direct file loading
+   webview.start(gui=gui, debug=debug_mode)
    ```
 
-2. **Use window events** - Register handlers for lifecycle events:
-   - `window.events.shown` - Window first displayed (do post-show init here)
-   - `window.events.loaded` - DOM fully loaded
-   - `window.events.closing` - Window about to close
+2. **Register events BEFORE `webview.start()`**:
+   ```python
+   window = webview.create_window(...)
+   window.events.loaded += on_loaded  # BEFORE start()
+   window.events.closing += on_closing
+   webview.start()  # Events already registered
+   ```
 
-3. **Lazy initialization** - Don't do heavy init in `__init__`:
+3. **Use polling for ready detection** - Don't rely solely on events:
+   ```python
+   # api.py
+   def is_ready(self) -> bool:
+       return self._ready
+
+   def mark_ready(self):
+       self._ready = True
+   ```
+
+4. **Lazy initialization** - Don't do heavy init in `__init__`:
    ```python
    @property
    def session(self):
        if self._session is None:
            self._session = create_session()
        return self._session
-   ```
-
-4. **Background pre-warming** - Pre-warm resources after window shows:
-   ```python
-   def on_shown():
-       threading.Thread(target=prewarm_session, daemon=True).start()
    ```
 
 ### Python-to-JavaScript Communication
@@ -104,21 +111,25 @@ cd backend && python main.py
 
 ## Common Issues
 
-1. **"False is not defined"**: Python bool not converted to JS - use `_python_to_js()`
-2. **UI freeze / Not Responding**:
-   - Use `webview.start(func, args)` pattern
-   - Move heavy init to `window.events.shown` handler
-   - Use lazy initialization for HTTP sessions
+1. **"False is not defined"**: Python bool not converted to JS - use `_to_js()` in api.py
+2. **UI freeze / Not Responding** (v1.5.0 complete fix):
+   - **DO NOT** use `http_server=True` in `webview.start()` - causes Windows freezing
+   - Register event handlers **BEFORE** `webview.start()`, not in callback
+   - Use polling via `api.is_ready()` instead of relying on events
+   - Keep `webview.start()` simple with minimal parameters
 3. **Request timeout**: Add timeout to all `requests` calls
 4. **Windows blurry**: Ensure DPI awareness is set in `main.py`
 5. **Slow startup**:
    - Add HTML loading spinner in index.html
    - Use lazy session initialization
-   - Pre-warm session in background after window shows
-6. **Windows stuck on "Initializing"** (v1.4.0 fix):
-   - **Root cause**: `pywebviewready` event fires before React useEffect registers listener
-   - **Solution**: Early event capture in `index.html` before React loads
-   - See `frontend/index.html` and `frontend/src/hooks/useApi.ts`
+6. **Stuck on "Initializing"** (v1.5.0 complete fix):
+   - **Root cause**: Multiple - `pywebviewready` event timing + `http_server=True` + event registration timing
+   - **Solution**:
+     1. Early event capture script in `<head>` BEFORE any other scripts
+     2. Frontend polls `api.is_ready()` instead of relying solely on events
+     3. Backend sets `_ready=True` on `window.events.loaded`
+     4. 15-second timeout with error display
+   - See `frontend/index.html`, `frontend/src/hooks/useApi.ts`, `backend/main.py`
 
 ## Platform-Specific Notes
 

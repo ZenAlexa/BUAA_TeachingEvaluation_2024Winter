@@ -25,6 +25,7 @@ export interface EvaluationProgress {
 }
 
 export interface PyWebViewAPI {
+  is_ready: () => Promise<boolean>
   login: (username: string, password: string) => Promise<LoginResult>
   get_task_info: () => Promise<TaskInfo>
   start_evaluation: (method: EvaluationMethod, special_teachers: string[]) => Promise<void>
@@ -33,7 +34,7 @@ export interface PyWebViewAPI {
 
 declare global {
   interface Window {
-    pywebview: {
+    pywebview?: {
       api: PyWebViewAPI
     }
   }

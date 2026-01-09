@@ -23,10 +23,10 @@ import styles from './App.module.css'
 type AppState = 'login' | 'settings' | 'progress' | 'complete'
 
 // Application version
-const APP_VERSION = '1.4.0'
+const APP_VERSION = '1.5.0'
 
 export default function App() {
-  const { ready, login, getTaskInfo, startEvaluation, openGithub } = useApi()
+  const { ready, error: apiError, login, getTaskInfo, startEvaluation, openGithub } = useApi()
   const { t } = useI18n()
 
   const methodOptions = useMemo(() => [
@@ -225,7 +225,7 @@ export default function App() {
 
   // Show loading screen while API initializes
   if (!ready) {
-    return <LoadingScreen text={t.initializing} />
+    return <LoadingScreen text={t.initializing} error={apiError} />
   }
 
   return (

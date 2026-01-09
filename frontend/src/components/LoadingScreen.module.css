@@ -43,3 +43,23 @@
   color: var(--gray-500);
   letter-spacing: 0.5px;
 }
+
+/* Error display */
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 300px;
+  text-align: center;
+}
+
+.errorIcon {
+  color: var(--error);
+}
+
+.errorText {
+  font-size: var(--text-sm);
+  color: var(--error);
+  line-height: 1.5;
+}

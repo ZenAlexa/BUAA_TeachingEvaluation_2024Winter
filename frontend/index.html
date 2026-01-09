@@ -4,9 +4,70 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BUAA Eval</title>
+
+    <!--
+      CRITICAL: pywebview API detection script - MUST be FIRST in head
+      This captures pywebviewready event before React or any other scripts load.
+      The event may fire at ANY time, even before DOM is ready.
+    -->
+    <script>
+      (function() {
+        'use strict';
+
+        // State management
+        window.__pywebviewState = {
+          apiReady: false,
+          callbacks: []
+        };
+
+        // Notify all waiting callbacks
+        function notifyCallbacks() {
+          var state = window.__pywebviewState;
+          if (state.apiReady) return;
+
+          // Verify API actually exists
+          if (!window.pywebview || !window.pywebview.api) return;
+
+          state.apiReady = true;
+          console.log('[pywebview] API ready, notifying callbacks');
+
+          // Run all waiting callbacks
+          var cbs = state.callbacks;
+          state.callbacks = [];
+          for (var i = 0; i < cbs.length; i++) {
+            try { cbs[i](); } catch (e) { console.error('[pywebview] Callback error:', e); }
+          }
+        }
+
+        // Listen for pywebviewready event (may have already fired)
+        window.addEventListener('pywebviewready', function() {
+          console.log('[pywebview] pywebviewready event received');
+          notifyCallbacks();
+        });
+
+        // Check if already ready (edge case - event fired before script ran)
+        if (window.pywebview && window.pywebview.api) {
+          console.log('[pywebview] API already available');
+          notifyCallbacks();
+        }
+
+        // API for React to use
+        window.__onPywebviewReady = function(callback) {
+          var state = window.__pywebviewState;
+          if (state.apiReady && window.pywebview && window.pywebview.api) {
+            console.log('[pywebview] Immediate callback execution');
+            callback();
+          } else {
+            console.log('[pywebview] Queueing callback');
+            state.callbacks.push(callback);
+          }
+        };
+      })();
+    </script>
+
     <!-- Inline critical styles for immediate loading feedback -->
     <style>
-      /* Prevent flash of unstyled content */
+      /* Base styles - prevent flash */
       html, body {
         margin: 0;
         padding: 0;
@@ -17,7 +78,7 @@
         overflow: hidden;
       }
 
-      /* Initial loading screen - shows before React mounts */
+      /* Initial loading screen */
       #initial-loader {
         position: fixed;
         inset: 0;
@@ -28,9 +89,15 @@
         background: #000;
         z-index: 9999;
         gap: 24px;
+        transition: opacity 0.3s ease-out;
       }
 
-      /* Animated spinner */
+      #initial-loader.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* Spinner */
       .loader-spinner {
         width: 40px;
         height: 40px;
@@ -38,6 +105,10 @@
         border-top-color: #3b82f6;
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
       }
 
       /* Loading text */
@@ -59,96 +130,43 @@
         pointer-events: none;
         z-index: -1;
       }
-
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-
-      /* Fade out animation when hiding */
-      .loader-fade-out {
-        animation: fadeOut 0.3s ease-out forwards;
-      }
-
-      @keyframes fadeOut {
-        to {
-          opacity: 0;
-          visibility: hidden;
-        }
-      }
-
-      /* Hide loader when React is ready */
-      #root:not(:empty) + script + #initial-loader,
-      #root.loaded ~ #initial-loader {
-        display: none;
-      }
     </style>
   </head>
   <body>
+    <!-- React mount point -->
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Initial loader - removed by React when mounted -->
+    <!-- Initial loader - hidden by React when mounted -->
     <div id="initial-loader">
       <div class="loader-spinner"></div>
       <div class="loader-text">Loading...</div>
     </div>
 
-    <script>
-      // Early capture of pywebviewready event - BEFORE React loads
-      // Solves race condition: event may fire before React mounts
-      (function() {
-        window.__pywebviewApiReady = false;
-        window.__pywebviewReadyCallbacks = [];
+    <!-- React app - load after loader is visible -->
+    <script type="module" src="/src/main.tsx"></script>
 
-        function notifyReady() {
-          if (window.__pywebviewApiReady) return;
-          window.__pywebviewApiReady = true;
-          var cbs = window.__pywebviewReadyCallbacks;
-          window.__pywebviewReadyCallbacks = [];
-          for (var i = 0; i < cbs.length; i++) {
-            try { cbs[i](); } catch (e) {}
-          }
+    <!-- Loader removal logic -->
+    <script>
+      (function() {
+        'use strict';
+
+        var loader = document.getElementById('initial-loader');
+        if (!loader) return;
+
+        // Function to hide loader
+        function hideLoader() {
+          if (!loader || loader.classList.contains('fade-out')) return;
+          loader.classList.add('fade-out');
+          setTimeout(function() {
+            if (loader.parentNode) loader.parentNode.removeChild(loader);
+          }, 300);
         }
 
-        // Capture event immediately
-        window.addEventListener('pywebviewready', notifyReady);
+        // Global function for React to call
+        window.__hideInitialLoader = hideLoader;
 
-        // Check if already ready (edge case)
-        if (window.pywebview && window.pywebview.api) notifyReady();
-
-        // API for React to use
-        window.__onPywebviewReady = function(cb) {
-          if (window.__pywebviewApiReady && window.pywebview && window.pywebview.api) {
-            cb();
-          } else {
-            window.__pywebviewReadyCallbacks.push(cb);
-          }
-        };
-      })();
-
-      // Remove loader when React mounts
-      (function() {
-        var loader = document.getElementById('initial-loader');
-        var root = document.getElementById('root');
-        if (!loader || !root) return;
-
-        var observer = new MutationObserver(function() {
-          if (root.children.length > 0) {
-            observer.disconnect();
-            loader.classList.add('loader-fade-out');
-            setTimeout(function() { loader.remove(); }, 300);
-          }
-        });
-        observer.observe(root, { childList: true });
-
-        // Fallback timeout
-        setTimeout(function() {
-          if (loader.parentNode) {
-            observer.disconnect();
-            loader.classList.add('loader-fade-out');
-            setTimeout(function() { loader.remove(); }, 300);
-          }
-        }, 8000);
+        // Fallback: hide after 10 seconds regardless
+        setTimeout(hideLoader, 10000);
       })();
     </script>
   </body>
